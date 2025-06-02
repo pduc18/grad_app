@@ -1,0 +1,305 @@
+ARM GAS  /tmp/ccmEGF7i.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"PIDController.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.section	.text.PID_Init,"ax",%progbits
+  16              		.align	1
+  17              		.global	PID_Init
+  18              		.arch armv7-m
+  19              		.syntax unified
+  20              		.thumb
+  21              		.thumb_func
+  22              		.fpu softvfp
+  24              	PID_Init:
+  25              	.LVL0:
+  26              	.LFB0:
+  27              		.file 1 "Core/Src/PIDController.c"
+   1:Core/Src/PIDController.c **** #include "PIDController.h"
+   2:Core/Src/PIDController.c **** 
+   3:Core/Src/PIDController.c **** void PID_Init(PIDController* pid, float Kp, float Ki, float Kd, float Ts) {
+  28              		.loc 1 3 75 view -0
+  29              		.cfi_startproc
+  30              		@ args = 4, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+   4:Core/Src/PIDController.c ****     pid->Kp = Kp;
+  33              		.loc 1 4 5 view .LVU1
+  34              		.loc 1 4 13 is_stmt 0 view .LVU2
+  35 0000 0160     		str	r1, [r0]	@ float
+   5:Core/Src/PIDController.c ****     pid->Ki = Ki;
+  36              		.loc 1 5 5 is_stmt 1 view .LVU3
+  37              		.loc 1 5 13 is_stmt 0 view .LVU4
+  38 0002 4260     		str	r2, [r0, #4]	@ float
+   6:Core/Src/PIDController.c ****     pid->Kd = Kd;
+  39              		.loc 1 6 5 is_stmt 1 view .LVU5
+  40              		.loc 1 6 13 is_stmt 0 view .LVU6
+  41 0004 8360     		str	r3, [r0, #8]	@ float
+   7:Core/Src/PIDController.c ****     pid->Ts = Ts;
+  42              		.loc 1 7 5 is_stmt 1 view .LVU7
+  43              		.loc 1 7 13 is_stmt 0 view .LVU8
+  44 0006 009B     		ldr	r3, [sp]	@ float
+  45              	.LVL1:
+  46              		.loc 1 7 13 view .LVU9
+  47 0008 C360     		str	r3, [r0, #12]	@ float
+   8:Core/Src/PIDController.c **** 
+   9:Core/Src/PIDController.c **** 
+  10:Core/Src/PIDController.c ****     pid->error[0] = 0;
+  48              		.loc 1 10 5 is_stmt 1 view .LVU10
+ARM GAS  /tmp/ccmEGF7i.s 			page 2
+
+
+  49              		.loc 1 10 19 is_stmt 0 view .LVU11
+  50 000a 0023     		movs	r3, #0
+  51 000c 0361     		str	r3, [r0, #16]	@ float
+  11:Core/Src/PIDController.c ****     pid->error[1] = 0;
+  52              		.loc 1 11 5 is_stmt 1 view .LVU12
+  53              		.loc 1 11 19 is_stmt 0 view .LVU13
+  54 000e 4361     		str	r3, [r0, #20]	@ float
+  12:Core/Src/PIDController.c ****     pid->error[2] = 0;
+  55              		.loc 1 12 5 is_stmt 1 view .LVU14
+  56              		.loc 1 12 19 is_stmt 0 view .LVU15
+  57 0010 8361     		str	r3, [r0, #24]	@ float
+  13:Core/Src/PIDController.c ****     pid->output = 0;
+  58              		.loc 1 13 5 is_stmt 1 view .LVU16
+  59              		.loc 1 13 17 is_stmt 0 view .LVU17
+  60 0012 C361     		str	r3, [r0, #28]	@ float
+  14:Core/Src/PIDController.c **** }
+  61              		.loc 1 14 1 view .LVU18
+  62 0014 7047     		bx	lr
+  63              		.cfi_endproc
+  64              	.LFE0:
+  66              		.global	__aeabi_fsub
+  67              		.global	__aeabi_fmul
+  68              		.global	__aeabi_fadd
+  69              		.global	__aeabi_fdiv
+  70              		.global	__aeabi_fcmpgt
+  71              		.global	__aeabi_fcmplt
+  72              		.section	.text.PID_Compute,"ax",%progbits
+  73              		.align	1
+  74              		.global	PID_Compute
+  75              		.syntax unified
+  76              		.thumb
+  77              		.thumb_func
+  78              		.fpu softvfp
+  80              	PID_Compute:
+  81              	.LVL2:
+  82              	.LFB1:
+  15:Core/Src/PIDController.c **** 
+  16:Core/Src/PIDController.c **** float PID_Compute(PIDController* pid, float setpoint, float measurement) {
+  83              		.loc 1 16 74 is_stmt 1 view -0
+  84              		.cfi_startproc
+  85              		@ args = 0, pretend = 0, frame = 0
+  86              		@ frame_needed = 0, uses_anonymous_args = 0
+  87              		.loc 1 16 74 is_stmt 0 view .LVU20
+  88 0000 2DE9F843 		push	{r3, r4, r5, r6, r7, r8, r9, lr}
+  89              	.LCFI0:
+  90              		.cfi_def_cfa_offset 32
+  91              		.cfi_offset 3, -32
+  92              		.cfi_offset 4, -28
+  93              		.cfi_offset 5, -24
+  94              		.cfi_offset 6, -20
+  95              		.cfi_offset 7, -16
+  96              		.cfi_offset 8, -12
+  97              		.cfi_offset 9, -8
+  98              		.cfi_offset 14, -4
+  99 0004 0446     		mov	r4, r0
+ 100 0006 0846     		mov	r0, r1
+ 101              	.LVL3:
+ARM GAS  /tmp/ccmEGF7i.s 			page 3
+
+
+  17:Core/Src/PIDController.c ****     // Shift error history
+  18:Core/Src/PIDController.c ****     pid->error[2] = pid->error[1];
+ 102              		.loc 1 18 5 is_stmt 1 view .LVU21
+ 103              		.loc 1 18 31 is_stmt 0 view .LVU22
+ 104 0008 D4F81490 		ldr	r9, [r4, #20]	@ float
+ 105              		.loc 1 18 19 view .LVU23
+ 106 000c C4F81890 		str	r9, [r4, #24]	@ float
+  19:Core/Src/PIDController.c ****     pid->error[1] = pid->error[0];
+ 107              		.loc 1 19 5 is_stmt 1 view .LVU24
+ 108              		.loc 1 19 31 is_stmt 0 view .LVU25
+ 109 0010 2669     		ldr	r6, [r4, #16]	@ float
+ 110              		.loc 1 19 19 view .LVU26
+ 111 0012 6661     		str	r6, [r4, #20]	@ float
+  20:Core/Src/PIDController.c **** 
+  21:Core/Src/PIDController.c ****     // New error
+  22:Core/Src/PIDController.c ****     pid->error[0] = setpoint - measurement;
+ 112              		.loc 1 22 5 is_stmt 1 view .LVU27
+ 113              		.loc 1 22 30 is_stmt 0 view .LVU28
+ 114 0014 1146     		mov	r1, r2
+ 115              	.LVL4:
+ 116              		.loc 1 22 30 view .LVU29
+ 117 0016 FFF7FEFF 		bl	__aeabi_fsub
+ 118              	.LVL5:
+ 119              		.loc 1 22 30 view .LVU30
+ 120 001a 0546     		mov	r5, r0
+ 121              		.loc 1 22 19 view .LVU31
+ 122 001c 2061     		str	r0, [r4, #16]	@ float
+  23:Core/Src/PIDController.c **** 
+  24:Core/Src/PIDController.c ****     // PID difference equation (incremental form)
+  25:Core/Src/PIDController.c ****     float delta_output = pid->Kp * (pid->error[0] - pid->error[1])
+ 123              		.loc 1 25 5 is_stmt 1 view .LVU32
+ 124              		.loc 1 25 29 is_stmt 0 view .LVU33
+ 125 001e 2768     		ldr	r7, [r4]	@ float
+ 126              		.loc 1 25 51 view .LVU34
+ 127 0020 3146     		mov	r1, r6
+ 128 0022 FFF7FEFF 		bl	__aeabi_fsub
+ 129              	.LVL6:
+ 130 0026 0146     		mov	r1, r0
+ 131              		.loc 1 25 34 view .LVU35
+ 132 0028 3846     		mov	r0, r7
+ 133 002a FFF7FEFF 		bl	__aeabi_fmul
+ 134              	.LVL7:
+ 135 002e 0746     		mov	r7, r0
+  26:Core/Src/PIDController.c ****                        + pid->Ki * pid->Ts * pid->error[0]
+ 136              		.loc 1 26 39 view .LVU36
+ 137 0030 D4F80C80 		ldr	r8, [r4, #12]	@ float
+ 138              		.loc 1 26 34 view .LVU37
+ 139 0034 4146     		mov	r1, r8
+ 140 0036 6068     		ldr	r0, [r4, #4]	@ float
+ 141 0038 FFF7FEFF 		bl	__aeabi_fmul
+ 142              	.LVL8:
+ 143 003c 0146     		mov	r1, r0
+ 144              		.loc 1 26 44 view .LVU38
+ 145 003e 2846     		mov	r0, r5
+ 146 0040 FFF7FEFF 		bl	__aeabi_fmul
+ 147              	.LVL9:
+ 148 0044 0146     		mov	r1, r0
+ARM GAS  /tmp/ccmEGF7i.s 			page 4
+
+
+ 149              		.loc 1 26 24 view .LVU39
+ 150 0046 3846     		mov	r0, r7
+ 151 0048 FFF7FEFF 		bl	__aeabi_fadd
+ 152              	.LVL10:
+ 153 004c 0746     		mov	r7, r0
+  27:Core/Src/PIDController.c ****                        + pid->Kd / pid->Ts * (pid->error[0] - 2.0f * pid->error[1] + pid->error[2])
+ 154              		.loc 1 27 34 view .LVU40
+ 155 004e 4146     		mov	r1, r8
+ 156 0050 A068     		ldr	r0, [r4, #8]	@ float
+ 157 0052 FFF7FEFF 		bl	__aeabi_fdiv
+ 158              	.LVL11:
+ 159 0056 8046     		mov	r8, r0
+ 160              		.loc 1 27 68 view .LVU41
+ 161 0058 3146     		mov	r1, r6
+ 162 005a 3046     		mov	r0, r6
+ 163 005c FFF7FEFF 		bl	__aeabi_fadd
+ 164              	.LVL12:
+ 165 0060 0146     		mov	r1, r0
+ 166              		.loc 1 27 61 view .LVU42
+ 167 0062 2846     		mov	r0, r5
+ 168 0064 FFF7FEFF 		bl	__aeabi_fsub
+ 169              	.LVL13:
+ 170 0068 0146     		mov	r1, r0
+ 171              		.loc 1 27 84 view .LVU43
+ 172 006a 4846     		mov	r0, r9
+ 173 006c FFF7FEFF 		bl	__aeabi_fadd
+ 174              	.LVL14:
+ 175 0070 0146     		mov	r1, r0
+ 176              		.loc 1 27 44 view .LVU44
+ 177 0072 4046     		mov	r0, r8
+ 178 0074 FFF7FEFF 		bl	__aeabi_fmul
+ 179              	.LVL15:
+ 180 0078 0146     		mov	r1, r0
+  25:Core/Src/PIDController.c ****                        + pid->Ki * pid->Ts * pid->error[0]
+ 181              		.loc 1 25 11 view .LVU45
+ 182 007a 3846     		mov	r0, r7
+ 183 007c FFF7FEFF 		bl	__aeabi_fadd
+ 184              	.LVL16:
+  28:Core/Src/PIDController.c **** 
+  29:Core/Src/PIDController.c ****     pid->output += delta_output;
+ 185              		.loc 1 29 5 is_stmt 1 view .LVU46
+ 186              		.loc 1 29 17 is_stmt 0 view .LVU47
+ 187 0080 E169     		ldr	r1, [r4, #28]	@ float
+ 188 0082 FFF7FEFF 		bl	__aeabi_fadd
+ 189              	.LVL17:
+ 190              		.loc 1 29 17 view .LVU48
+ 191 0086 0546     		mov	r5, r0
+ 192 0088 E061     		str	r0, [r4, #28]	@ float
+  30:Core/Src/PIDController.c **** 
+  31:Core/Src/PIDController.c ****     // Anti-windup
+  32:Core/Src/PIDController.c ****     if (pid->output > VOLTAGE_MAX)
+ 193              		.loc 1 32 5 is_stmt 1 view .LVU49
+ 194              		.loc 1 32 8 is_stmt 0 view .LVU50
+ 195 008a 0949     		ldr	r1, .L11
+ 196 008c FFF7FEFF 		bl	__aeabi_fcmpgt
+ 197              	.LVL18:
+ 198 0090 20B1     		cbz	r0, .L9
+ARM GAS  /tmp/ccmEGF7i.s 			page 5
+
+
+  33:Core/Src/PIDController.c ****         pid->output = VOLTAGE_MAX;
+ 199              		.loc 1 33 9 is_stmt 1 view .LVU51
+ 200              		.loc 1 33 21 is_stmt 0 view .LVU52
+ 201 0092 074B     		ldr	r3, .L11
+ 202 0094 E361     		str	r3, [r4, #28]	@ float
+ 203              	.L5:
+  34:Core/Src/PIDController.c ****     else if (pid->output < -VOLTAGE_MAX)
+  35:Core/Src/PIDController.c ****         pid->output = -VOLTAGE_MAX;
+  36:Core/Src/PIDController.c **** 
+  37:Core/Src/PIDController.c ****     return pid->output;
+ 204              		.loc 1 37 5 is_stmt 1 view .LVU53
+  38:Core/Src/PIDController.c **** }
+ 205              		.loc 1 38 1 is_stmt 0 view .LVU54
+ 206 0096 E069     		ldr	r0, [r4, #28]	@ float
+ 207 0098 BDE8F883 		pop	{r3, r4, r5, r6, r7, r8, r9, pc}
+ 208              	.LVL19:
+ 209              	.L9:
+  34:Core/Src/PIDController.c ****     else if (pid->output < -VOLTAGE_MAX)
+ 210              		.loc 1 34 10 is_stmt 1 view .LVU55
+  34:Core/Src/PIDController.c ****     else if (pid->output < -VOLTAGE_MAX)
+ 211              		.loc 1 34 13 is_stmt 0 view .LVU56
+ 212 009c 0549     		ldr	r1, .L11+4
+ 213 009e 2846     		mov	r0, r5
+ 214 00a0 FFF7FEFF 		bl	__aeabi_fcmplt
+ 215              	.LVL20:
+ 216 00a4 0028     		cmp	r0, #0
+ 217 00a6 F6D0     		beq	.L5
+  35:Core/Src/PIDController.c **** 
+ 218              		.loc 1 35 9 is_stmt 1 view .LVU57
+  35:Core/Src/PIDController.c **** 
+ 219              		.loc 1 35 21 is_stmt 0 view .LVU58
+ 220 00a8 024B     		ldr	r3, .L11+4
+ 221 00aa E361     		str	r3, [r4, #28]	@ float
+ 222 00ac F3E7     		b	.L5
+ 223              	.L12:
+ 224 00ae 00BF     		.align	2
+ 225              	.L11:
+ 226 00b0 00004041 		.word	1094713344
+ 227 00b4 000040C1 		.word	-1052770304
+ 228              		.cfi_endproc
+ 229              	.LFE1:
+ 231              		.text
+ 232              	.Letext0:
+ 233              		.file 2 "Core/Inc/PIDController.h"
+ARM GAS  /tmp/ccmEGF7i.s 			page 6
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 PIDController.c
+     /tmp/ccmEGF7i.s:16     .text.PID_Init:0000000000000000 $t
+     /tmp/ccmEGF7i.s:24     .text.PID_Init:0000000000000000 PID_Init
+     /tmp/ccmEGF7i.s:73     .text.PID_Compute:0000000000000000 $t
+     /tmp/ccmEGF7i.s:80     .text.PID_Compute:0000000000000000 PID_Compute
+     /tmp/ccmEGF7i.s:226    .text.PID_Compute:00000000000000b0 $d
+
+UNDEFINED SYMBOLS
+__aeabi_fsub
+__aeabi_fmul
+__aeabi_fadd
+__aeabi_fdiv
+__aeabi_fcmpgt
+__aeabi_fcmplt

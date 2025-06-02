@@ -1,0 +1,805 @@
+ARM GAS  /tmp/cc6Qsqam.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.eabi_attribute 20, 1
+   3              		.eabi_attribute 21, 1
+   4              		.eabi_attribute 23, 3
+   5              		.eabi_attribute 24, 1
+   6              		.eabi_attribute 25, 1
+   7              		.eabi_attribute 26, 1
+   8              		.eabi_attribute 30, 1
+   9              		.eabi_attribute 34, 1
+  10              		.eabi_attribute 18, 4
+  11              		.file	"motorController.c"
+  12              		.text
+  13              	.Ltext0:
+  14              		.cfi_sections	.debug_frame
+  15              		.global	__aeabi_fsub
+  16              		.global	__aeabi_fmul
+  17              		.global	__aeabi_fadd
+  18              		.global	__aeabi_fcmpgt
+  19              		.global	__aeabi_fdiv
+  20              		.section	.text.LookupTargetPosition,"ax",%progbits
+  21              		.align	1
+  22              		.global	LookupTargetPosition
+  23              		.arch armv7-m
+  24              		.syntax unified
+  25              		.thumb
+  26              		.thumb_func
+  27              		.fpu softvfp
+  29              	LookupTargetPosition:
+  30              	.LVL0:
+  31              	.LFB65:
+  32              		.file 1 "Core/Src/motorController.c"
+   1:Core/Src/motorController.c **** #include "motorController.h"
+   2:Core/Src/motorController.c **** #include "stm32f1xx_hal.h"
+   3:Core/Src/motorController.c **** #include <math.h>
+   4:Core/Src/motorController.c **** 
+   5:Core/Src/motorController.c **** #define PULSES_PER_REV     3584.0f
+   6:Core/Src/motorController.c **** #define DIAMETER_MM        8.0f // Wheel diameter in mm
+   7:Core/Src/motorController.c **** #define PITCH              1.25 // mm
+   8:Core/Src/motorController.c **** #define WHEEL_CIRCUMFERENCE_MM 25.12f // Wheel circumference in mm
+   9:Core/Src/motorController.c **** #define DISTANCE_PER_PULSE 0.007f // mm per pulse
+  10:Core/Src/motorController.c **** 
+  11:Core/Src/motorController.c **** extern TIM_HandleTypeDef htim1;  // Encoder - TIM1
+  12:Core/Src/motorController.c **** extern TIM_HandleTypeDef htim3;  // PWM - TIM3 CH1 (PA6)
+  13:Core/Src/motorController.c **** 
+  14:Core/Src/motorController.c **** static PIDController pid;
+  15:Core/Src/motorController.c **** static float target_position_mm = 0;
+  16:Core/Src/motorController.c **** 
+  17:Core/Src/motorController.c **** // Lookup table for x, y to target position mapping
+  18:Core/Src/motorController.c **** typedef struct {
+  19:Core/Src/motorController.c ****     float x;
+  20:Core/Src/motorController.c ****     float y;
+  21:Core/Src/motorController.c ****     float target_position_mm;
+  22:Core/Src/motorController.c **** } PositionMapping;
+  23:Core/Src/motorController.c **** 
+  24:Core/Src/motorController.c **** static const PositionMapping position_table[] = {
+  25:Core/Src/motorController.c ****     {0.0f, 0.0f, 0.0f},     // (x, y) -> target_position_mm
+  26:Core/Src/motorController.c ****     {10.0f, 10.0f, 50.0f},
+ARM GAS  /tmp/cc6Qsqam.s 			page 2
+
+
+  27:Core/Src/motorController.c ****     {20.0f, 20.0f, 100.0f},
+  28:Core/Src/motorController.c ****     {30.0f, 30.0f, 150.0f},
+  29:Core/Src/motorController.c ****     {40.0f, 40.0f, 200.0f},
+  30:Core/Src/motorController.c ****     // Add more entries as needed
+  31:Core/Src/motorController.c **** };
+  32:Core/Src/motorController.c **** #define TABLE_SIZE (sizeof(position_table) / sizeof(position_table[0]))
+  33:Core/Src/motorController.c **** 
+  34:Core/Src/motorController.c **** Motor_TypeDef motor = {
+  35:Core/Src/motorController.c ****     .encoderValueNow = 0,
+  36:Core/Src/motorController.c ****     .encoderValuePrev = 0,
+  37:Core/Src/motorController.c ****     .positionPulse = 0,
+  38:Core/Src/motorController.c ****     .position = 0,
+  39:Core/Src/motorController.c **** };
+  40:Core/Src/motorController.c **** 
+  41:Core/Src/motorController.c **** // Find the closest x, y in the lookup table using Euclidean distance
+  42:Core/Src/motorController.c **** float LookupTargetPosition(float x, float y) {
+  33              		.loc 1 42 46 view -0
+  34              		.cfi_startproc
+  35              		@ args = 0, pretend = 0, frame = 0
+  36              		@ frame_needed = 0, uses_anonymous_args = 0
+  37              		.loc 1 42 46 is_stmt 0 view .LVU1
+  38 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+  39              	.LCFI0:
+  40              		.cfi_def_cfa_offset 32
+  41              		.cfi_offset 4, -32
+  42              		.cfi_offset 5, -28
+  43              		.cfi_offset 6, -24
+  44              		.cfi_offset 7, -20
+  45              		.cfi_offset 8, -16
+  46              		.cfi_offset 9, -12
+  47              		.cfi_offset 10, -8
+  48              		.cfi_offset 14, -4
+  49 0004 8146     		mov	r9, r0
+  50 0006 8846     		mov	r8, r1
+  43:Core/Src/motorController.c ****     float min_distance = FLT_MAX;
+  51              		.loc 1 43 5 is_stmt 1 view .LVU2
+  52              	.LVL1:
+  44:Core/Src/motorController.c ****     float target_pos = 0.0f;
+  53              		.loc 1 44 5 view .LVU3
+  45:Core/Src/motorController.c ****     float target_pos_mm = 0.0f;
+  54              		.loc 1 45 5 view .LVU4
+  46:Core/Src/motorController.c **** 
+  47:Core/Src/motorController.c ****     for (size_t i = 0; i < TABLE_SIZE; i++) {
+  55              		.loc 1 47 5 view .LVU5
+  56              	.LBB2:
+  57              		.loc 1 47 10 view .LVU6
+  58              		.loc 1 47 17 is_stmt 0 view .LVU7
+  59 0008 0024     		movs	r4, #0
+  60              	.LBE2:
+  44:Core/Src/motorController.c ****     float target_pos_mm = 0.0f;
+  61              		.loc 1 44 11 view .LVU8
+  62 000a 4FF0000A 		mov	r10, #0
+  43:Core/Src/motorController.c ****     float target_pos = 0.0f;
+  63              		.loc 1 43 11 view .LVU9
+  64 000e 1E4F     		ldr	r7, .L9
+  65              	.LBB4:
+  66              		.loc 1 47 5 view .LVU10
+ARM GAS  /tmp/cc6Qsqam.s 			page 3
+
+
+  67 0010 00E0     		b	.L2
+  68              	.LVL2:
+  69              	.L3:
+  70              		.loc 1 47 40 is_stmt 1 discriminator 2 view .LVU11
+  71              		.loc 1 47 41 is_stmt 0 discriminator 2 view .LVU12
+  72 0012 0134     		adds	r4, r4, #1
+  73              	.LVL3:
+  74              	.L2:
+  75              		.loc 1 47 24 is_stmt 1 discriminator 1 view .LVU13
+  76              		.loc 1 47 5 is_stmt 0 discriminator 1 view .LVU14
+  77 0014 042C     		cmp	r4, #4
+  78 0016 2ED8     		bhi	.L8
+  79              	.LBB3:
+  48:Core/Src/motorController.c ****         float dx = position_table[i].x - x;
+  80              		.loc 1 48 9 is_stmt 1 view .LVU15
+  81              		.loc 1 48 37 is_stmt 0 view .LVU16
+  82 0018 1C4B     		ldr	r3, .L9+4
+  83 001a 04EB4402 		add	r2, r4, r4, lsl #1
+  84 001e 03EB8205 		add	r5, r3, r2, lsl #2
+  85              		.loc 1 48 15 view .LVU17
+  86 0022 4946     		mov	r1, r9
+  87 0024 53F82200 		ldr	r0, [r3, r2, lsl #2]	@ float
+  88 0028 FFF7FEFF 		bl	__aeabi_fsub
+  89              	.LVL4:
+  90 002c 0646     		mov	r6, r0
+  91              	.LVL5:
+  49:Core/Src/motorController.c ****         float dy = position_table[i].y - y;
+  92              		.loc 1 49 9 is_stmt 1 view .LVU18
+  93              		.loc 1 49 15 is_stmt 0 view .LVU19
+  94 002e 4146     		mov	r1, r8
+  95 0030 6868     		ldr	r0, [r5, #4]	@ float
+  96              	.LVL6:
+  97              		.loc 1 49 15 view .LVU20
+  98 0032 FFF7FEFF 		bl	__aeabi_fsub
+  99              	.LVL7:
+ 100 0036 0546     		mov	r5, r0
+ 101              	.LVL8:
+  50:Core/Src/motorController.c ****         float distance = sqrtf(dx * dx + dy * dy);
+ 102              		.loc 1 50 9 is_stmt 1 view .LVU21
+ 103              		.loc 1 50 35 is_stmt 0 view .LVU22
+ 104 0038 3146     		mov	r1, r6
+ 105 003a 3046     		mov	r0, r6
+ 106              	.LVL9:
+ 107              		.loc 1 50 35 view .LVU23
+ 108 003c FFF7FEFF 		bl	__aeabi_fmul
+ 109              	.LVL10:
+ 110 0040 0646     		mov	r6, r0
+ 111              	.LVL11:
+ 112              		.loc 1 50 45 view .LVU24
+ 113 0042 2946     		mov	r1, r5
+ 114 0044 2846     		mov	r0, r5
+ 115 0046 FFF7FEFF 		bl	__aeabi_fmul
+ 116              	.LVL12:
+ 117 004a 0146     		mov	r1, r0
+ 118              		.loc 1 50 26 view .LVU25
+ 119 004c 3046     		mov	r0, r6
+ 120 004e FFF7FEFF 		bl	__aeabi_fadd
+ARM GAS  /tmp/cc6Qsqam.s 			page 4
+
+
+ 121              	.LVL13:
+ 122 0052 FFF7FEFF 		bl	sqrtf
+ 123              	.LVL14:
+ 124 0056 0546     		mov	r5, r0
+ 125              	.LVL15:
+  51:Core/Src/motorController.c ****         if (distance < min_distance) {
+ 126              		.loc 1 51 9 is_stmt 1 view .LVU26
+ 127              		.loc 1 51 12 is_stmt 0 view .LVU27
+ 128 0058 0146     		mov	r1, r0
+ 129 005a 3846     		mov	r0, r7
+ 130              	.LVL16:
+ 131              		.loc 1 51 12 view .LVU28
+ 132 005c FFF7FEFF 		bl	__aeabi_fcmpgt
+ 133              	.LVL17:
+ 134              		.loc 1 51 12 view .LVU29
+ 135 0060 0028     		cmp	r0, #0
+ 136 0062 D6D0     		beq	.L3
+  52:Core/Src/motorController.c ****             min_distance = distance;
+ 137              		.loc 1 52 13 is_stmt 1 view .LVU30
+ 138              	.LVL18:
+  53:Core/Src/motorController.c ****             target_pos = position_table[i].target_position_mm;
+ 139              		.loc 1 53 13 view .LVU31
+ 140              		.loc 1 53 24 is_stmt 0 view .LVU32
+ 141 0064 04EB4403 		add	r3, r4, r4, lsl #1
+ 142 0068 084A     		ldr	r2, .L9+4
+ 143 006a 02EB8303 		add	r3, r2, r3, lsl #2
+ 144 006e D3F808A0 		ldr	r10, [r3, #8]	@ float
+ 145              	.LVL19:
+  52:Core/Src/motorController.c ****             min_distance = distance;
+ 146              		.loc 1 52 26 view .LVU33
+ 147 0072 2F46     		mov	r7, r5
+ 148 0074 CDE7     		b	.L3
+ 149              	.LVL20:
+ 150              	.L8:
+  52:Core/Src/motorController.c ****             min_distance = distance;
+ 151              		.loc 1 52 26 view .LVU34
+ 152              	.LBE3:
+ 153              	.LBE4:
+  54:Core/Src/motorController.c ****         }
+  55:Core/Src/motorController.c ****     }
+  56:Core/Src/motorController.c ****     // Convert target position to mm
+  57:Core/Src/motorController.c ****     target_pos_mm = target_pos * WHEEL_CIRCUMFERENCE_MM / PITCH; // Assuming target_pos is in pulse
+ 154              		.loc 1 57 5 is_stmt 1 view .LVU35
+ 155              		.loc 1 57 32 is_stmt 0 view .LVU36
+ 156 0076 0649     		ldr	r1, .L9+8
+ 157 0078 5046     		mov	r0, r10
+ 158 007a FFF7FEFF 		bl	__aeabi_fmul
+ 159              	.LVL21:
+ 160              		.loc 1 57 19 view .LVU37
+ 161 007e 0549     		ldr	r1, .L9+12
+ 162 0080 FFF7FEFF 		bl	__aeabi_fdiv
+ 163              	.LVL22:
+  58:Core/Src/motorController.c ****     return target_pos_mm;
+ 164              		.loc 1 58 5 is_stmt 1 view .LVU38
+  59:Core/Src/motorController.c **** }
+ 165              		.loc 1 59 1 is_stmt 0 view .LVU39
+ 166 0084 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ARM GAS  /tmp/cc6Qsqam.s 			page 5
+
+
+ 167              	.LVL23:
+ 168              	.L10:
+ 169              		.loc 1 59 1 view .LVU40
+ 170              		.align	2
+ 171              	.L9:
+ 172 0088 FFFF7F7F 		.word	2139095039
+ 173 008c 00000000 		.word	.LANCHOR0
+ 174 0090 C3F5C841 		.word	1103689155
+ 175 0094 0000A03F 		.word	1067450368
+ 176              		.cfi_endproc
+ 177              	.LFE65:
+ 179              		.section	.text.Motor_Init,"ax",%progbits
+ 180              		.align	1
+ 181              		.global	Motor_Init
+ 182              		.syntax unified
+ 183              		.thumb
+ 184              		.thumb_func
+ 185              		.fpu softvfp
+ 187              	Motor_Init:
+ 188              	.LFB66:
+  60:Core/Src/motorController.c **** 
+  61:Core/Src/motorController.c **** void Motor_Init(void) {
+ 189              		.loc 1 61 23 is_stmt 1 view -0
+ 190              		.cfi_startproc
+ 191              		@ args = 0, pretend = 0, frame = 0
+ 192              		@ frame_needed = 0, uses_anonymous_args = 0
+ 193 0000 30B5     		push	{r4, r5, lr}
+ 194              	.LCFI1:
+ 195              		.cfi_def_cfa_offset 12
+ 196              		.cfi_offset 4, -12
+ 197              		.cfi_offset 5, -8
+ 198              		.cfi_offset 14, -4
+ 199 0002 83B0     		sub	sp, sp, #12
+ 200              	.LCFI2:
+ 201              		.cfi_def_cfa_offset 24
+  62:Core/Src/motorController.c ****     /*
+  63:Core/Src/motorController.c ****     * Initialize the motor controller
+  64:Core/Src/motorController.c ****     * Set up the encoder and PWM
+  65:Core/Src/motorController.c ****     */
+  66:Core/Src/motorController.c ****     PID_Init(&pid, 2.0f, 0.5f, 5.0f, 0.001f); // PID parameters
+ 202              		.loc 1 66 5 view .LVU42
+ 203 0004 0D4B     		ldr	r3, .L13
+ 204 0006 0093     		str	r3, [sp]	@ float
+ 205 0008 0D4B     		ldr	r3, .L13+4
+ 206 000a 4FF07C52 		mov	r2, #1056964608
+ 207 000e 4FF08041 		mov	r1, #1073741824
+ 208 0012 0C48     		ldr	r0, .L13+8
+ 209 0014 FFF7FEFF 		bl	PID_Init
+ 210              	.LVL24:
+  67:Core/Src/motorController.c ****     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);  // Make sure PWM is off
+ 211              		.loc 1 67 5 view .LVU43
+ 212 0018 0B4B     		ldr	r3, .L13+12
+ 213 001a 1B68     		ldr	r3, [r3]
+ 214 001c 0024     		movs	r4, #0
+ 215 001e 5C63     		str	r4, [r3, #52]
+  68:Core/Src/motorController.c ****     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // IN1 = 0
+ 216              		.loc 1 68 5 view .LVU44
+ARM GAS  /tmp/cc6Qsqam.s 			page 6
+
+
+ 217 0020 0A4D     		ldr	r5, .L13+16
+ 218 0022 2246     		mov	r2, r4
+ 219 0024 1021     		movs	r1, #16
+ 220 0026 2846     		mov	r0, r5
+ 221 0028 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 222              	.LVL25:
+  69:Core/Src/motorController.c ****     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // IN2 = 0
+ 223              		.loc 1 69 5 view .LVU45
+ 224 002c 2246     		mov	r2, r4
+ 225 002e 2021     		movs	r1, #32
+ 226 0030 2846     		mov	r0, r5
+ 227 0032 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 228              	.LVL26:
+  70:Core/Src/motorController.c **** }
+ 229              		.loc 1 70 1 is_stmt 0 view .LVU46
+ 230 0036 03B0     		add	sp, sp, #12
+ 231              	.LCFI3:
+ 232              		.cfi_def_cfa_offset 12
+ 233              		@ sp needed
+ 234 0038 30BD     		pop	{r4, r5, pc}
+ 235              	.L14:
+ 236 003a 00BF     		.align	2
+ 237              	.L13:
+ 238 003c 6F12833A 		.word	981668463
+ 239 0040 0000A040 		.word	1084227584
+ 240 0044 00000000 		.word	.LANCHOR1
+ 241 0048 00000000 		.word	htim3
+ 242 004c 00080140 		.word	1073809408
+ 243              		.cfi_endproc
+ 244              	.LFE66:
+ 246              		.section	.text.Motor_SetTargetPosition,"ax",%progbits
+ 247              		.align	1
+ 248              		.global	Motor_SetTargetPosition
+ 249              		.syntax unified
+ 250              		.thumb
+ 251              		.thumb_func
+ 252              		.fpu softvfp
+ 254              	Motor_SetTargetPosition:
+ 255              	.LVL27:
+ 256              	.LFB67:
+  71:Core/Src/motorController.c ****     
+  72:Core/Src/motorController.c **** void Motor_SetTargetPosition(float mm) {
+ 257              		.loc 1 72 40 is_stmt 1 view -0
+ 258              		.cfi_startproc
+ 259              		@ args = 0, pretend = 0, frame = 0
+ 260              		@ frame_needed = 0, uses_anonymous_args = 0
+ 261              		@ link register save eliminated.
+  73:Core/Src/motorController.c ****     target_position_mm = mm;
+ 262              		.loc 1 73 5 view .LVU48
+ 263              		.loc 1 73 24 is_stmt 0 view .LVU49
+ 264 0000 014B     		ldr	r3, .L16
+ 265 0002 1860     		str	r0, [r3]	@ float
+  74:Core/Src/motorController.c **** }
+ 266              		.loc 1 74 1 view .LVU50
+ 267 0004 7047     		bx	lr
+ 268              	.L17:
+ 269 0006 00BF     		.align	2
+ARM GAS  /tmp/cc6Qsqam.s 			page 7
+
+
+ 270              	.L16:
+ 271 0008 00000000 		.word	.LANCHOR2
+ 272              		.cfi_endproc
+ 273              	.LFE67:
+ 275              		.global	__aeabi_i2f
+ 276              		.section	.text.Motor_GetCurrentPosition_mm,"ax",%progbits
+ 277              		.align	1
+ 278              		.global	Motor_GetCurrentPosition_mm
+ 279              		.syntax unified
+ 280              		.thumb
+ 281              		.thumb_func
+ 282              		.fpu softvfp
+ 284              	Motor_GetCurrentPosition_mm:
+ 285              	.LFB68:
+  75:Core/Src/motorController.c **** 
+  76:Core/Src/motorController.c **** float Motor_GetCurrentPosition_mm(void) {
+ 286              		.loc 1 76 41 is_stmt 1 view -0
+ 287              		.cfi_startproc
+ 288              		@ args = 0, pretend = 0, frame = 0
+ 289              		@ frame_needed = 0, uses_anonymous_args = 0
+ 290 0000 08B5     		push	{r3, lr}
+ 291              	.LCFI4:
+ 292              		.cfi_def_cfa_offset 8
+ 293              		.cfi_offset 3, -8
+ 294              		.cfi_offset 14, -4
+  77:Core/Src/motorController.c ****     // Get the current encoder value
+  78:Core/Src/motorController.c ****     motor.encoderValueNow = __HAL_TIM_GET_COUNTER(&htim1);
+ 295              		.loc 1 78 5 view .LVU52
+ 296              		.loc 1 78 29 is_stmt 0 view .LVU53
+ 297 0002 104B     		ldr	r3, .L22
+ 298 0004 1B68     		ldr	r3, [r3]
+ 299 0006 5A6A     		ldr	r2, [r3, #36]
+ 300              		.loc 1 78 27 view .LVU54
+ 301 0008 0F4B     		ldr	r3, .L22+4
+ 302 000a 1A60     		str	r2, [r3]
+  79:Core/Src/motorController.c **** 
+  80:Core/Src/motorController.c ****     // Calculate difference between current and previous encoder values
+  81:Core/Src/motorController.c ****     int32_t delta = motor.encoderValueNow - motor.encoderValuePrev;
+ 303              		.loc 1 81 5 is_stmt 1 view .LVU55
+ 304              		.loc 1 81 50 is_stmt 0 view .LVU56
+ 305 000c 5868     		ldr	r0, [r3, #4]
+ 306              		.loc 1 81 13 view .LVU57
+ 307 000e 101A     		subs	r0, r2, r0
+ 308              	.LVL28:
+  82:Core/Src/motorController.c **** 
+  83:Core/Src/motorController.c ****     // Overflow handling
+  84:Core/Src/motorController.c ****     if (delta > 30000) {
+ 309              		.loc 1 84 5 is_stmt 1 view .LVU58
+ 310              		.loc 1 84 8 is_stmt 0 view .LVU59
+ 311 0010 47F23053 		movw	r3, #30000
+ 312 0014 9842     		cmp	r0, r3
+ 313 0016 0FDD     		ble	.L19
+  85:Core/Src/motorController.c ****         delta -= 65536;
+ 314              		.loc 1 85 9 is_stmt 1 view .LVU60
+ 315              		.loc 1 85 15 is_stmt 0 view .LVU61
+ 316 0018 A0F58030 		sub	r0, r0, #65536
+ 317              	.LVL29:
+ARM GAS  /tmp/cc6Qsqam.s 			page 8
+
+
+ 318              	.L20:
+  86:Core/Src/motorController.c ****     } else if (delta < -30000) {
+  87:Core/Src/motorController.c ****         delta += 65536;
+  88:Core/Src/motorController.c ****     }
+  89:Core/Src/motorController.c **** 
+  90:Core/Src/motorController.c ****     // Update previous encoder value
+  91:Core/Src/motorController.c ****     motor.encoderValuePrev = motor.encoderValueNow;
+ 319              		.loc 1 91 5 is_stmt 1 view .LVU62
+ 320              		.loc 1 91 28 is_stmt 0 view .LVU63
+ 321 001c 0A4B     		ldr	r3, .L22+4
+ 322 001e 5A60     		str	r2, [r3, #4]
+  92:Core/Src/motorController.c **** 
+  93:Core/Src/motorController.c ****     // Update position in pulses
+  94:Core/Src/motorController.c ****     motor.positionPulse += delta;
+ 323              		.loc 1 94 5 is_stmt 1 view .LVU64
+ 324              		.loc 1 94 25 is_stmt 0 view .LVU65
+ 325 0020 9A68     		ldr	r2, [r3, #8]
+ 326 0022 1044     		add	r0, r0, r2
+ 327              	.LVL30:
+ 328              		.loc 1 94 25 view .LVU66
+ 329 0024 9860     		str	r0, [r3, #8]
+  95:Core/Src/motorController.c **** 
+  96:Core/Src/motorController.c ****     // Calculate position in mm
+  97:Core/Src/motorController.c ****     return motor.positionPulse * WHEEL_CIRCUMFERENCE_MM / PULSES_PER_REV;
+ 330              		.loc 1 97 5 is_stmt 1 view .LVU67
+ 331              		.loc 1 97 32 is_stmt 0 view .LVU68
+ 332 0026 FFF7FEFF 		bl	__aeabi_i2f
+ 333              	.LVL31:
+ 334 002a 0849     		ldr	r1, .L22+8
+ 335 002c FFF7FEFF 		bl	__aeabi_fmul
+ 336              	.LVL32:
+ 337              		.loc 1 97 57 view .LVU69
+ 338 0030 0749     		ldr	r1, .L22+12
+ 339 0032 FFF7FEFF 		bl	__aeabi_fdiv
+ 340              	.LVL33:
+  98:Core/Src/motorController.c **** }
+ 341              		.loc 1 98 1 view .LVU70
+ 342 0036 08BD     		pop	{r3, pc}
+ 343              	.LVL34:
+ 344              	.L19:
+  86:Core/Src/motorController.c ****         delta += 65536;
+ 345              		.loc 1 86 12 is_stmt 1 view .LVU71
+  86:Core/Src/motorController.c ****         delta += 65536;
+ 346              		.loc 1 86 15 is_stmt 0 view .LVU72
+ 347 0038 064B     		ldr	r3, .L22+16
+ 348 003a 9842     		cmp	r0, r3
+ 349 003c EEDA     		bge	.L20
+  87:Core/Src/motorController.c ****     }
+ 350              		.loc 1 87 9 is_stmt 1 view .LVU73
+  87:Core/Src/motorController.c ****     }
+ 351              		.loc 1 87 15 is_stmt 0 view .LVU74
+ 352 003e 00F58030 		add	r0, r0, #65536
+ 353              	.LVL35:
+  87:Core/Src/motorController.c ****     }
+ 354              		.loc 1 87 15 view .LVU75
+ 355 0042 EBE7     		b	.L20
+ 356              	.L23:
+ARM GAS  /tmp/cc6Qsqam.s 			page 9
+
+
+ 357              		.align	2
+ 358              	.L22:
+ 359 0044 00000000 		.word	htim1
+ 360 0048 00000000 		.word	.LANCHOR3
+ 361 004c C3F5C841 		.word	1103689155
+ 362 0050 00006045 		.word	1163919360
+ 363 0054 D08AFFFF 		.word	-30000
+ 364              		.cfi_endproc
+ 365              	.LFE68:
+ 367              		.global	__aeabi_f2iz
+ 368              		.global	__aeabi_fcmplt
+ 369              		.section	.text.SetMotorOutput,"ax",%progbits
+ 370              		.align	1
+ 371              		.global	SetMotorOutput
+ 372              		.syntax unified
+ 373              		.thumb
+ 374              		.thumb_func
+ 375              		.fpu softvfp
+ 377              	SetMotorOutput:
+ 378              	.LVL36:
+ 379              	.LFB69:
+  99:Core/Src/motorController.c **** 
+ 100:Core/Src/motorController.c **** void SetMotorOutput(float voltage) {
+ 380              		.loc 1 100 36 is_stmt 1 view -0
+ 381              		.cfi_startproc
+ 382              		@ args = 0, pretend = 0, frame = 0
+ 383              		@ frame_needed = 0, uses_anonymous_args = 0
+ 384              		.loc 1 100 36 is_stmt 0 view .LVU77
+ 385 0000 38B5     		push	{r3, r4, r5, lr}
+ 386              	.LCFI5:
+ 387              		.cfi_def_cfa_offset 16
+ 388              		.cfi_offset 3, -16
+ 389              		.cfi_offset 4, -12
+ 390              		.cfi_offset 5, -8
+ 391              		.cfi_offset 14, -4
+ 392 0002 0446     		mov	r4, r0
+ 101:Core/Src/motorController.c ****     int pwm = (int)(fabsf(voltage) / VOLTAGE_MAX * 1000.0f);  // Convert to 0-1000 PWM duty
+ 393              		.loc 1 101 5 is_stmt 1 view .LVU78
+ 394              		.loc 1 101 21 is_stmt 0 view .LVU79
+ 395 0004 20F00040 		bic	r0, r0, #-2147483648
+ 396              	.LVL37:
+ 397              		.loc 1 101 36 view .LVU80
+ 398 0008 1F49     		ldr	r1, .L39
+ 399 000a FFF7FEFF 		bl	__aeabi_fdiv
+ 400              	.LVL38:
+ 401              		.loc 1 101 50 view .LVU81
+ 402 000e 1F49     		ldr	r1, .L39+4
+ 403 0010 FFF7FEFF 		bl	__aeabi_fmul
+ 404              	.LVL39:
+ 405              		.loc 1 101 9 view .LVU82
+ 406 0014 FFF7FEFF 		bl	__aeabi_f2iz
+ 407              	.LVL40:
+ 408 0018 0546     		mov	r5, r0
+ 409              	.LVL41:
+ 102:Core/Src/motorController.c ****     if (pwm > 1000) pwm = 1000;
+ 410              		.loc 1 102 5 is_stmt 1 view .LVU83
+ 411              		.loc 1 102 8 is_stmt 0 view .LVU84
+ARM GAS  /tmp/cc6Qsqam.s 			page 10
+
+
+ 412 001a B0F57A7F 		cmp	r0, #1000
+ 413 001e 01DD     		ble	.L25
+ 414              		.loc 1 102 25 view .LVU85
+ 415 0020 4FF47A75 		mov	r5, #1000
+ 416              	.L25:
+ 417              	.LVL42:
+ 103:Core/Src/motorController.c **** 
+ 104:Core/Src/motorController.c ****     // Direction control
+ 105:Core/Src/motorController.c ****     if (voltage > 0) {
+ 418              		.loc 1 105 5 is_stmt 1 view .LVU86
+ 419              		.loc 1 105 8 is_stmt 0 view .LVU87
+ 420 0024 0021     		movs	r1, #0
+ 421 0026 2046     		mov	r0, r4
+ 422 0028 FFF7FEFF 		bl	__aeabi_fcmpgt
+ 423              	.LVL43:
+ 424 002c 80B9     		cbnz	r0, .L37
+ 106:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // IN1 = 1
+ 107:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // IN2 = 0
+ 108:Core/Src/motorController.c ****     } else if (voltage < 0) {
+ 425              		.loc 1 108 12 is_stmt 1 view .LVU88
+ 426              		.loc 1 108 15 is_stmt 0 view .LVU89
+ 427 002e 0021     		movs	r1, #0
+ 428 0030 2046     		mov	r0, r4
+ 429 0032 FFF7FEFF 		bl	__aeabi_fcmplt
+ 430              	.LVL44:
+ 431 0036 D0B9     		cbnz	r0, .L38
+ 109:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // IN1 = 0
+ 110:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // IN2 = 1
+ 111:Core/Src/motorController.c ****     } else {
+ 112:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // Dừng
+ 432              		.loc 1 112 9 is_stmt 1 view .LVU90
+ 433 0038 154C     		ldr	r4, .L39+8
+ 434              	.LVL45:
+ 435              		.loc 1 112 9 is_stmt 0 view .LVU91
+ 436 003a 0022     		movs	r2, #0
+ 437 003c 1021     		movs	r1, #16
+ 438 003e 2046     		mov	r0, r4
+ 439 0040 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 440              	.LVL46:
+ 113:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
+ 441              		.loc 1 113 9 is_stmt 1 view .LVU92
+ 442 0044 0022     		movs	r2, #0
+ 443 0046 2021     		movs	r1, #32
+ 444 0048 2046     		mov	r0, r4
+ 445 004a FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 446              	.LVL47:
+ 447 004e 0AE0     		b	.L28
+ 448              	.LVL48:
+ 449              	.L37:
+ 106:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // IN1 = 1
+ 450              		.loc 1 106 9 view .LVU93
+ 451 0050 0F4C     		ldr	r4, .L39+8
+ 452              	.LVL49:
+ 106:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // IN1 = 1
+ 453              		.loc 1 106 9 is_stmt 0 view .LVU94
+ 454 0052 0122     		movs	r2, #1
+ 455 0054 1021     		movs	r1, #16
+ARM GAS  /tmp/cc6Qsqam.s 			page 11
+
+
+ 456 0056 2046     		mov	r0, r4
+ 457 0058 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 458              	.LVL50:
+ 107:Core/Src/motorController.c ****     } else if (voltage < 0) {
+ 459              		.loc 1 107 9 is_stmt 1 view .LVU95
+ 460 005c 0022     		movs	r2, #0
+ 461 005e 2021     		movs	r1, #32
+ 462 0060 2046     		mov	r0, r4
+ 463 0062 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 464              	.LVL51:
+ 465              	.L28:
+ 114:Core/Src/motorController.c ****     }
+ 115:Core/Src/motorController.c ****     // Set PWM duty cycle
+ 116:Core/Src/motorController.c ****     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm);
+ 466              		.loc 1 116 5 view .LVU96
+ 467 0066 0B4B     		ldr	r3, .L39+12
+ 468 0068 1B68     		ldr	r3, [r3]
+ 469 006a 5D63     		str	r5, [r3, #52]
+ 117:Core/Src/motorController.c **** }
+ 470              		.loc 1 117 1 is_stmt 0 view .LVU97
+ 471 006c 38BD     		pop	{r3, r4, r5, pc}
+ 472              	.LVL52:
+ 473              	.L38:
+ 109:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // IN2 = 1
+ 474              		.loc 1 109 9 is_stmt 1 view .LVU98
+ 475 006e 084C     		ldr	r4, .L39+8
+ 476              	.LVL53:
+ 109:Core/Src/motorController.c ****         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // IN2 = 1
+ 477              		.loc 1 109 9 is_stmt 0 view .LVU99
+ 478 0070 0022     		movs	r2, #0
+ 479 0072 1021     		movs	r1, #16
+ 480 0074 2046     		mov	r0, r4
+ 481 0076 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 482              	.LVL54:
+ 110:Core/Src/motorController.c ****     } else {
+ 483              		.loc 1 110 9 is_stmt 1 view .LVU100
+ 484 007a 0122     		movs	r2, #1
+ 485 007c 2021     		movs	r1, #32
+ 486 007e 2046     		mov	r0, r4
+ 487 0080 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 488              	.LVL55:
+ 489 0084 EFE7     		b	.L28
+ 490              	.L40:
+ 491 0086 00BF     		.align	2
+ 492              	.L39:
+ 493 0088 00004041 		.word	1094713344
+ 494 008c 00007A44 		.word	1148846080
+ 495 0090 00080140 		.word	1073809408
+ 496 0094 00000000 		.word	htim3
+ 497              		.cfi_endproc
+ 498              	.LFE69:
+ 500              		.section	.text.Motor_ComputePID,"ax",%progbits
+ 501              		.align	1
+ 502              		.global	Motor_ComputePID
+ 503              		.syntax unified
+ 504              		.thumb
+ 505              		.thumb_func
+ARM GAS  /tmp/cc6Qsqam.s 			page 12
+
+
+ 506              		.fpu softvfp
+ 508              	Motor_ComputePID:
+ 509              	.LVL56:
+ 510              	.LFB70:
+ 118:Core/Src/motorController.c **** 
+ 119:Core/Src/motorController.c **** void Motor_ComputePID(float current_position, float target_position_mm) {
+ 511              		.loc 1 119 73 view -0
+ 512              		.cfi_startproc
+ 513              		@ args = 0, pretend = 0, frame = 0
+ 514              		@ frame_needed = 0, uses_anonymous_args = 0
+ 515              		.loc 1 119 73 is_stmt 0 view .LVU102
+ 516 0000 08B5     		push	{r3, lr}
+ 517              	.LCFI6:
+ 518              		.cfi_def_cfa_offset 8
+ 519              		.cfi_offset 3, -8
+ 520              		.cfi_offset 14, -4
+ 521 0002 0246     		mov	r2, r0
+ 120:Core/Src/motorController.c ****     float output_voltage = PID_Compute(&pid, target_position_mm, current_position);
+ 522              		.loc 1 120 5 is_stmt 1 view .LVU103
+ 523              		.loc 1 120 28 is_stmt 0 view .LVU104
+ 524 0004 0248     		ldr	r0, .L43
+ 525              	.LVL57:
+ 526              		.loc 1 120 28 view .LVU105
+ 527 0006 FFF7FEFF 		bl	PID_Compute
+ 528              	.LVL58:
+ 121:Core/Src/motorController.c ****     SetMotorOutput(output_voltage);
+ 529              		.loc 1 121 5 is_stmt 1 view .LVU106
+ 530 000a FFF7FEFF 		bl	SetMotorOutput
+ 531              	.LVL59:
+ 122:Core/Src/motorController.c **** }...
+ 532              		.loc 1 122 1 is_stmt 0 view .LVU107
+ 533 000e 08BD     		pop	{r3, pc}
+ 534              	.L44:
+ 535              		.align	2
+ 536              	.L43:
+ 537 0010 00000000 		.word	.LANCHOR1
+ 538              		.cfi_endproc
+ 539              	.LFE70:
+ 541              		.global	motor
+ 542              		.section	.bss.motor,"aw",%nobits
+ 543              		.align	2
+ 544              		.set	.LANCHOR3,. + 0
+ 547              	motor:
+ 548 0000 00000000 		.space	16
+ 548      00000000 
+ 548      00000000 
+ 548      00000000 
+ 549              		.section	.bss.pid,"aw",%nobits
+ 550              		.align	2
+ 551              		.set	.LANCHOR1,. + 0
+ 554              	pid:
+ 555 0000 00000000 		.space	32
+ 555      00000000 
+ 555      00000000 
+ 555      00000000 
+ 555      00000000 
+ 556              		.section	.bss.target_position_mm,"aw",%nobits
+ARM GAS  /tmp/cc6Qsqam.s 			page 13
+
+
+ 557              		.align	2
+ 558              		.set	.LANCHOR2,. + 0
+ 561              	target_position_mm:
+ 562 0000 00000000 		.space	4
+ 563              		.section	.rodata.position_table,"a"
+ 564              		.align	2
+ 565              		.set	.LANCHOR0,. + 0
+ 568              	position_table:
+ 569 0000 00000000 		.word	0
+ 570 0004 00000000 		.word	0
+ 571 0008 00000000 		.word	0
+ 572 000c 00002041 		.word	1092616192
+ 573 0010 00002041 		.word	1092616192
+ 574 0014 00004842 		.word	1112014848
+ 575 0018 0000A041 		.word	1101004800
+ 576 001c 0000A041 		.word	1101004800
+ 577 0020 0000C842 		.word	1120403456
+ 578 0024 0000F041 		.word	1106247680
+ 579 0028 0000F041 		.word	1106247680
+ 580 002c 00001643 		.word	1125515264
+ 581 0030 00002042 		.word	1109393408
+ 582 0034 00002042 		.word	1109393408
+ 583 0038 00004843 		.word	1128792064
+ 584              		.text
+ 585              	.Letext0:
+ 586              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 587              		.file 3 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stddef.h"
+ 588              		.file 4 "Core/Inc/PIDController.h"
+ 589              		.file 5 "Core/Inc/motorController.h"
+ 590              		.file 6 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 591              		.file 7 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 592              		.file 8 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 593              		.file 9 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 594              		.file 10 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h"
+ 595              		.file 11 "/usr/include/newlib/math.h"
+ARM GAS  /tmp/cc6Qsqam.s 			page 14
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 motorController.c
+     /tmp/cc6Qsqam.s:21     .text.LookupTargetPosition:0000000000000000 $t
+     /tmp/cc6Qsqam.s:29     .text.LookupTargetPosition:0000000000000000 LookupTargetPosition
+     /tmp/cc6Qsqam.s:172    .text.LookupTargetPosition:0000000000000088 $d
+     /tmp/cc6Qsqam.s:180    .text.Motor_Init:0000000000000000 $t
+     /tmp/cc6Qsqam.s:187    .text.Motor_Init:0000000000000000 Motor_Init
+     /tmp/cc6Qsqam.s:238    .text.Motor_Init:000000000000003c $d
+     /tmp/cc6Qsqam.s:247    .text.Motor_SetTargetPosition:0000000000000000 $t
+     /tmp/cc6Qsqam.s:254    .text.Motor_SetTargetPosition:0000000000000000 Motor_SetTargetPosition
+     /tmp/cc6Qsqam.s:271    .text.Motor_SetTargetPosition:0000000000000008 $d
+     /tmp/cc6Qsqam.s:277    .text.Motor_GetCurrentPosition_mm:0000000000000000 $t
+     /tmp/cc6Qsqam.s:284    .text.Motor_GetCurrentPosition_mm:0000000000000000 Motor_GetCurrentPosition_mm
+     /tmp/cc6Qsqam.s:359    .text.Motor_GetCurrentPosition_mm:0000000000000044 $d
+     /tmp/cc6Qsqam.s:370    .text.SetMotorOutput:0000000000000000 $t
+     /tmp/cc6Qsqam.s:377    .text.SetMotorOutput:0000000000000000 SetMotorOutput
+     /tmp/cc6Qsqam.s:493    .text.SetMotorOutput:0000000000000088 $d
+     /tmp/cc6Qsqam.s:501    .text.Motor_ComputePID:0000000000000000 $t
+     /tmp/cc6Qsqam.s:508    .text.Motor_ComputePID:0000000000000000 Motor_ComputePID
+     /tmp/cc6Qsqam.s:537    .text.Motor_ComputePID:0000000000000010 $d
+     /tmp/cc6Qsqam.s:547    .bss.motor:0000000000000000 motor
+     /tmp/cc6Qsqam.s:543    .bss.motor:0000000000000000 $d
+     /tmp/cc6Qsqam.s:550    .bss.pid:0000000000000000 $d
+     /tmp/cc6Qsqam.s:554    .bss.pid:0000000000000000 pid
+     /tmp/cc6Qsqam.s:557    .bss.target_position_mm:0000000000000000 $d
+     /tmp/cc6Qsqam.s:561    .bss.target_position_mm:0000000000000000 target_position_mm
+     /tmp/cc6Qsqam.s:564    .rodata.position_table:0000000000000000 $d
+     /tmp/cc6Qsqam.s:568    .rodata.position_table:0000000000000000 position_table
+
+UNDEFINED SYMBOLS
+__aeabi_fsub
+__aeabi_fmul
+__aeabi_fadd
+__aeabi_fcmpgt
+__aeabi_fdiv
+sqrtf
+PID_Init
+HAL_GPIO_WritePin
+htim3
+__aeabi_i2f
+htim1
+__aeabi_f2iz
+__aeabi_fcmplt
+PID_Compute
