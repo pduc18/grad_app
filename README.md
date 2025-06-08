@@ -84,7 +84,7 @@ LiDAR Data --> [UART Parser] --> (x, y)
    ```
 4. Flash the binary using ST-Link or `stm32flash`:
    ```bash
-   stm32flash -w build/firmware.hex -v -g 0x0 /dev/ttyUSB0
+   st-flash --reset write build/grad_app.bin 0x8000000
    ```
 
 ---
