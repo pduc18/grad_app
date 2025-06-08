@@ -20,9 +20,11 @@
 #include "main.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include "time.h"
 #include "motorController.h"
 #include "uartParser.h"
+#include "i2c_lcd.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -32,9 +34,11 @@
 /* USER CODE BEGIN PTD */
 // Define the size of the UART RX buffer
 #define DMA_BUFFER_SIZE 128
-uint8_t uart_dma_buffer[DMA_BUFFER_SIZE];
-float target_position; // Target position in mm
-float current_position; // Current position in mm
+
+volatile uint8_t uart_dma_buffer[DMA_BUFFER_SIZE];
+volatile float target_position; // Target position in mm
+volatile float current_position; // Current position in mm
+volatile float x, y; // Variables to hold the coordinates
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -49,6 +53,7 @@ float current_position; // Current position in mm
 
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
+I2C_LCD_HandleTypeDef lcd1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -123,8 +128,12 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim2);
   HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
   HAL_UART_Receive_DMA(&huart1, uart_dma_buffer, DMA_BUFFER_SIZE);
+  __HAL_UART_ENABLE_IT(&huart1, UART_IT_IDLE);
   Motor_Init(); // Initialize the motor controller
 
+  lcd1.hi2c = &hi2c1;
+  lcd1.address = 0x4E;
+  lcd_init(&lcd1); // Initialize the LCD
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -133,7 +142,7 @@ int main(void)
   {
     /* USER CODE END WHILE */
     LogData();
-    HAL_Delay(100); // Delay to simulate processing time
+    HAL_Delay(1000); // Delay to simulate processing time
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -470,6 +479,9 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static volatile uint32_t last_data_update = 0;
+static volatile bool data_valid = false;
+
 // Get target position via UART
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
 {
@@ -477,14 +489,46 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t Size)
     {
         uint16_t dma_write_index = DMA_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
         UART_ProcessDMAData(dma_write_index);
-        float x = getX();
-        float y = getY();
-        target_position = LookupTargetPosition(x, y); // Set target_position using lookup table
+        x = getX();
+        y = getY();
+        target_position = LookupTargetPosition(x, y);
+        
+        // Mark data as valid and update timestamp
+        last_data_update = HAL_GetTick();
+        data_valid = true;
+    }
+}
+
+void HAL_UART_IdleCallback(UART_HandleTypeDef *huart)
+{
+    if (huart->Instance == USART1)
+    {
+        // Process any remaining data in buffer
+        uint16_t dma_write_index = DMA_BUFFER_SIZE - __HAL_DMA_GET_COUNTER(&hdma_usart1_rx);
+        UART_ProcessDMAData(dma_write_index);
+        x = getX();
+        y = getY();
+        target_position = LookupTargetPosition(x, y);
+
+        last_data_update = HAL_GetTick();
+        data_valid = true; // Mark data as valid
     }
 }
 
 float GetTargetPosition(void) {
-    return target_position;
+    uint32_t current_time = HAL_GetTick();
+    
+    // Check if data is still valid (within timeout)
+    if (data_valid && (current_time - last_data_update < 1000)) {
+        return target_position;
+    }
+    
+    // If data is stale, invalidate it and return current position for safety
+    if (data_valid && (current_time - last_data_update >= 1000)) {
+        data_valid = false;
+    }
+    
+    return target_position; // Return last known target if never been valid
 }
 
 // Set motor output
@@ -492,23 +536,51 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
     if(htim->Instance == TIM2) {
         // Read the encoder value and update the motor position
         current_position = Motor_GetCurrentPosition_mm();
-        // Get target position
-        target_position = GetTargetPosition();
+        
+        // Only update target if we have valid recent data
+        float target = GetTargetPosition();
+        
         // Compute the PID control output
-        Motor_ComputePID(current_position, target_position);
+        Motor_ComputePID(current_position, target);
     }
 }
 
 // Log data via UART to computer
-void LogData(void)
-{
-    char buffer[64];
-    snprintf(buffer, sizeof(buffer), "X: %.2f, Y: %.2f\r\n", getX(), getY());
-    HAL_UART_Transmit(&huart2, (uint8_t *)buffer, strlen(buffer), HAL_MAX_DELAY);
+void LogData(void) {
+    static uint32_t log_counter = 0;
+    static float max_error = 0;
+    static float settling_time = 0;
+    static uint32_t target_change_time = 0;
+    
+    float error = fabsf(target_position - current_position);
+    
+    // Track maximum error
+    if (error > max_error) max_error = error;
+    
+    // Track settling time (when error < 1mm for first time)
+    static bool settled = false;
+    if (!settled && error < 1.0f) {
+        settling_time = (HAL_GetTick() - target_change_time) / 1000.0f;
+        settled = true;
+    }
+    
+    // Reset metrics when target changes significantly
+    static float prev_target = 0;
+    if (fabsf(target_position - prev_target) > 5.0f) {
+        max_error = 0;
+        settled = false;
+        target_change_time = HAL_GetTick();
+        prev_target = target_position;
+    }
+    
     char log_buffer[128];
-    snprintf(log_buffer, sizeof(log_buffer), "Current Position: %.2f mm, Target Position: %.2f mm\n",
-             current_position, target_position);
+    snprintf(log_buffer, sizeof(log_buffer), 
+        "X:%.2f Y:%.2f\r\nTarget:%.2f Current:%.2f\r\nPWM:%d Err:%.2f MaxErr:%.2f SettleT:%.2fs\r\n-----------------\r\n",
+        x, y, target_position, current_position, getPWM(), 
+        error, max_error, settling_time);
+    
     HAL_UART_Transmit(&huart2, (uint8_t*)log_buffer, strlen(log_buffer), HAL_MAX_DELAY);
+    log_counter++;
 }
 
 /* USER CODE END 4 */

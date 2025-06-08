@@ -1,4 +1,4 @@
-ARM GAS  /tmp/ccRQwMwx.s 			page 1
+ARM GAS  /tmp/cc2DFD5U.s 			page 1
 
 
    1              		.cpu cortex-m3
@@ -20,390 +20,486 @@ ARM GAS  /tmp/ccRQwMwx.s 			page 1
   17              	.LC0:
   18 0000 2325662C 		.ascii	"#%f,%f\000"
   18      256600
-  19              		.section	.text.UART_ProcessDMAData,"ax",%progbits
-  20              		.align	1
-  21              		.global	UART_ProcessDMAData
-  22              		.arch armv7-m
-  23              		.syntax unified
-  24              		.thumb
-  25              		.thumb_func
-  26              		.fpu softvfp
-  28              	UART_ProcessDMAData:
-  29              	.LVL0:
-  30              	.LFB3:
-  31              		.file 1 "Core/Src/uartParser.c"
+  19              		.global	__aeabi_fadd
+  20              		.global	__aeabi_f2d
+  21              		.global	__aeabi_dmul
+  22              		.global	__aeabi_ddiv
+  23              		.global	__aeabi_d2f
+  24              		.global	__aeabi_fmul
+  25              		.section	.text.UART_ProcessDMAData,"ax",%progbits
+  26              		.align	1
+  27              		.global	UART_ProcessDMAData
+  28              		.arch armv7-m
+  29              		.syntax unified
+  30              		.thumb
+  31              		.thumb_func
+  32              		.fpu softvfp
+  34              	UART_ProcessDMAData:
+  35              	.LVL0:
+  36              	.LFB3:
+  37              		.file 1 "Core/Src/uartParser.c"
    1:Core/Src/uartParser.c **** // uart_parser.c
    2:Core/Src/uartParser.c **** #include "uartParser.h"
    3:Core/Src/uartParser.c **** #include <string.h>
    4:Core/Src/uartParser.c **** #include <stdio.h>
    5:Core/Src/uartParser.c **** #include <stdlib.h>
-   6:Core/Src/uartParser.c **** 
-   7:Core/Src/uartParser.c **** #define DMA_BUFFER_SIZE 128
-   8:Core/Src/uartParser.c **** #define TEMP_LINE_BUFFER_SIZE 64
-   9:Core/Src/uartParser.c **** 
-  10:Core/Src/uartParser.c **** static float x_value = 0.0f;
-  11:Core/Src/uartParser.c **** static float y_value = 0.0f;
-  12:Core/Src/uartParser.c **** 
-  13:Core/Src/uartParser.c **** // DMA buffer do UART nhận dữ liệu
-  14:Core/Src/uartParser.c **** extern uint8_t uart_dma_buffer[DMA_BUFFER_SIZE];
-  15:Core/Src/uartParser.c **** 
-  16:Core/Src/uartParser.c **** // Vị trí cuối cùng đã xử lý
-  17:Core/Src/uartParser.c **** static uint16_t last_index = 0;
-  18:Core/Src/uartParser.c **** 
-  19:Core/Src/uartParser.c **** // Bộ đệm tạm để chứa 1 dòng
-  20:Core/Src/uartParser.c **** static char temp_line_buffer[TEMP_LINE_BUFFER_SIZE];
-  21:Core/Src/uartParser.c **** 
-  22:Core/Src/uartParser.c **** // Hàm xử lý dữ liệu từ DMA buffer
-  23:Core/Src/uartParser.c **** void UART_ProcessDMAData(uint16_t current_write_index) {
-  32              		.loc 1 23 56 view -0
-  33              		.cfi_startproc
-  34              		@ args = 0, pretend = 0, frame = 8
-ARM GAS  /tmp/ccRQwMwx.s 			page 2
+   6:Core/Src/uartParser.c **** #include <math.h>
+   7:Core/Src/uartParser.c **** 
+   8:Core/Src/uartParser.c **** #define DMA_BUFFER_SIZE 128
+   9:Core/Src/uartParser.c **** #define TEMP_LINE_BUFFER_SIZE 64
+  10:Core/Src/uartParser.c **** #define M_PI 3.14159265358979323846
+  11:Core/Src/uartParser.c **** 
+  12:Core/Src/uartParser.c **** static float distance = 0.0f;
+  13:Core/Src/uartParser.c **** static float angle = 0.0f;
+  14:Core/Src/uartParser.c **** static float x_value = 0.0f;
+  15:Core/Src/uartParser.c **** static float y_value = 0.0f;
+  16:Core/Src/uartParser.c **** 
+  17:Core/Src/uartParser.c **** // DMA buffer do UART nhận dữ liệu
+  18:Core/Src/uartParser.c **** extern uint8_t uart_dma_buffer[DMA_BUFFER_SIZE];
+  19:Core/Src/uartParser.c **** 
+  20:Core/Src/uartParser.c **** // Vị trí cuối cùng đã xử lý
+ARM GAS  /tmp/cc2DFD5U.s 			page 2
 
 
-  35              		@ frame_needed = 0, uses_anonymous_args = 0
-  36              		.loc 1 23 56 is_stmt 0 view .LVU1
-  37 0000 10B5     		push	{r4, lr}
-  38              	.LCFI0:
-  39              		.cfi_def_cfa_offset 8
-  40              		.cfi_offset 4, -8
-  41              		.cfi_offset 14, -4
-  42 0002 82B0     		sub	sp, sp, #8
-  43              	.LCFI1:
-  44              		.cfi_def_cfa_offset 16
-  45 0004 0446     		mov	r4, r0
-  24:Core/Src/uartParser.c ****     static uint16_t line_len = 0;
-  46              		.loc 1 24 5 is_stmt 1 view .LVU2
+  21:Core/Src/uartParser.c **** static uint16_t last_index = 0;
+  22:Core/Src/uartParser.c **** 
+  23:Core/Src/uartParser.c **** // Bộ đệm tạm để chứa 1 dòng
+  24:Core/Src/uartParser.c **** static char temp_line_buffer[TEMP_LINE_BUFFER_SIZE];
   25:Core/Src/uartParser.c **** 
-  26:Core/Src/uartParser.c ****     while (last_index != current_write_index) {
-  47              		.loc 1 26 5 view .LVU3
-  48              		.loc 1 26 11 is_stmt 0 view .LVU4
-  49 0006 01E0     		b	.L4
-  50              	.LVL1:
-  51              	.L3:
-  52              	.LBB2:
-  27:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  28:Core/Src/uartParser.c ****         last_index = (last_index + 1) % DMA_BUFFER_SIZE;
+  26:Core/Src/uartParser.c **** // Hàm xử lý dữ liệu từ DMA buffer
+  27:Core/Src/uartParser.c **** void UART_ProcessDMAData(uint16_t current_write_index) {
+  38              		.loc 1 27 56 view -0
+  39              		.cfi_startproc
+  40              		@ args = 0, pretend = 0, frame = 8
+  41              		@ frame_needed = 0, uses_anonymous_args = 0
+  42              		.loc 1 27 56 is_stmt 0 view .LVU1
+  43 0000 70B5     		push	{r4, r5, r6, lr}
+  44              	.LCFI0:
+  45              		.cfi_def_cfa_offset 16
+  46              		.cfi_offset 4, -16
+  47              		.cfi_offset 5, -12
+  48              		.cfi_offset 6, -8
+  49              		.cfi_offset 14, -4
+  50 0002 82B0     		sub	sp, sp, #8
+  51              	.LCFI1:
+  52              		.cfi_def_cfa_offset 24
+  53 0004 0446     		mov	r4, r0
+  28:Core/Src/uartParser.c ****     static uint16_t line_len = 0;
+  54              		.loc 1 28 5 is_stmt 1 view .LVU2
   29:Core/Src/uartParser.c **** 
-  30:Core/Src/uartParser.c ****         if (line_len < TEMP_LINE_BUFFER_SIZE - 1) {
-  31:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
-  32:Core/Src/uartParser.c ****         }
+  30:Core/Src/uartParser.c ****     while (last_index != current_write_index) {
+  55              		.loc 1 30 5 view .LVU3
+  56              		.loc 1 30 11 is_stmt 0 view .LVU4
+  57 0006 01E0     		b	.L4
+  58              	.LVL1:
+  59              	.L3:
+  60              	.LBB2:
+  31:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  32:Core/Src/uartParser.c ****         last_index = (last_index + 1) % DMA_BUFFER_SIZE;
   33:Core/Src/uartParser.c **** 
-  34:Core/Src/uartParser.c ****         if (c == '\n') {
-  53              		.loc 1 34 9 is_stmt 1 view .LVU5
-  54              		.loc 1 34 12 is_stmt 0 view .LVU6
-  55 0008 0A29     		cmp	r1, #10
-  56 000a 19D0     		beq	.L10
-  57              	.LVL2:
-  58              	.L4:
-  59              		.loc 1 34 12 view .LVU7
-  60              	.LBE2:
-  26:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  61              		.loc 1 26 11 is_stmt 1 view .LVU8
-  26:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  62              		.loc 1 26 23 is_stmt 0 view .LVU9
-  63 000c 214B     		ldr	r3, .L14
-  64 000e 1B88     		ldrh	r3, [r3]
-  26:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  65              		.loc 1 26 11 view .LVU10
-  66 0010 A342     		cmp	r3, r4
-  67 0012 3CD0     		beq	.L11
-  68              	.LBB4:
-  27:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  69              		.loc 1 27 9 is_stmt 1 view .LVU11
-  27:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
-  70              		.loc 1 27 14 is_stmt 0 view .LVU12
-  71 0014 204A     		ldr	r2, .L14+4
-  72 0016 D15C     		ldrb	r1, [r2, r3]	@ zero_extendqisi2
-  73              	.LVL3:
-  28:Core/Src/uartParser.c **** 
-  74              		.loc 1 28 9 is_stmt 1 view .LVU13
-ARM GAS  /tmp/ccRQwMwx.s 			page 3
+  34:Core/Src/uartParser.c ****         if (line_len < TEMP_LINE_BUFFER_SIZE - 1) {
+  35:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
+  36:Core/Src/uartParser.c ****         }
+  37:Core/Src/uartParser.c **** 
+  38:Core/Src/uartParser.c ****         if (c == '\n') {
+  61              		.loc 1 38 9 is_stmt 1 view .LVU5
+  62              		.loc 1 38 12 is_stmt 0 view .LVU6
+  63 0008 0A29     		cmp	r1, #10
+  64 000a 19D0     		beq	.L10
+  65              	.LVL2:
+  66              	.L4:
+  67              		.loc 1 38 12 view .LVU7
+  68              	.LBE2:
+  30:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  69              		.loc 1 30 11 is_stmt 1 view .LVU8
+  30:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  70              		.loc 1 30 23 is_stmt 0 view .LVU9
+  71 000c 364B     		ldr	r3, .L14+8
+  72 000e 1B88     		ldrh	r3, [r3]
+  30:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  73              		.loc 1 30 11 view .LVU10
+ARM GAS  /tmp/cc2DFD5U.s 			page 3
 
 
-  28:Core/Src/uartParser.c **** 
-  75              		.loc 1 28 34 is_stmt 0 view .LVU14
-  76 0018 0133     		adds	r3, r3, #1
-  28:Core/Src/uartParser.c **** 
-  77              		.loc 1 28 39 view .LVU15
-  78 001a 5A42     		rsbs	r2, r3, #0
-  79 001c 03F07F03 		and	r3, r3, #127
-  80 0020 02F07F02 		and	r2, r2, #127
-  81 0024 58BF     		it	pl
-  82 0026 5342     		rsbpl	r3, r2, #0
-  28:Core/Src/uartParser.c **** 
-  83              		.loc 1 28 20 view .LVU16
-  84 0028 1A4A     		ldr	r2, .L14
-  85 002a 1380     		strh	r3, [r2]	@ movhi
-  30:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
-  86              		.loc 1 30 9 is_stmt 1 view .LVU17
-  30:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
-  87              		.loc 1 30 22 is_stmt 0 view .LVU18
-  88 002c 1B4B     		ldr	r3, .L14+8
-  89 002e 1B88     		ldrh	r3, [r3]
-  30:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
-  90              		.loc 1 30 12 view .LVU19
-  91 0030 3E2B     		cmp	r3, #62
-  92 0032 E9D8     		bhi	.L3
-  31:Core/Src/uartParser.c ****         }
-  93              		.loc 1 31 13 is_stmt 1 view .LVU20
-  31:Core/Src/uartParser.c ****         }
-  94              		.loc 1 31 38 is_stmt 0 view .LVU21
-  95 0034 581C     		adds	r0, r3, #1
-  96 0036 194A     		ldr	r2, .L14+8
-  97 0038 1080     		strh	r0, [r2]	@ movhi
-  31:Core/Src/uartParser.c ****         }
-  98              		.loc 1 31 42 view .LVU22
-  99 003a 194A     		ldr	r2, .L14+12
- 100 003c D154     		strb	r1, [r2, r3]
- 101 003e E3E7     		b	.L3
- 102              	.L10:
- 103              	.LBB3:
-  35:Core/Src/uartParser.c ****             // Loại bỏ '\r' nếu có
-  36:Core/Src/uartParser.c ****             if (line_len >= 2 && temp_line_buffer[line_len - 2] == '\r') {
- 104              		.loc 1 36 13 is_stmt 1 view .LVU23
- 105              		.loc 1 36 26 is_stmt 0 view .LVU24
- 106 0040 164B     		ldr	r3, .L14+8
- 107 0042 1B88     		ldrh	r3, [r3]
- 108              		.loc 1 36 16 view .LVU25
- 109 0044 012B     		cmp	r3, #1
- 110 0046 04D9     		bls	.L5
- 111              		.loc 1 36 60 discriminator 1 view .LVU26
- 112 0048 9A1E     		subs	r2, r3, #2
- 113              		.loc 1 36 50 discriminator 1 view .LVU27
- 114 004a 1549     		ldr	r1, .L14+12
- 115              	.LVL4:
- 116              		.loc 1 36 50 discriminator 1 view .LVU28
- 117 004c 895C     		ldrb	r1, [r1, r2]	@ zero_extendqisi2
- 118              		.loc 1 36 31 discriminator 1 view .LVU29
- 119 004e 0D29     		cmp	r1, #13
- 120 0050 12D0     		beq	.L12
-ARM GAS  /tmp/ccRQwMwx.s 			page 4
+  74 0010 A342     		cmp	r3, r4
+  75 0012 61D0     		beq	.L11
+  76              	.LBB4:
+  31:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  77              		.loc 1 31 9 is_stmt 1 view .LVU11
+  31:Core/Src/uartParser.c ****         char c = (char)uart_dma_buffer[last_index];
+  78              		.loc 1 31 14 is_stmt 0 view .LVU12
+  79 0014 354A     		ldr	r2, .L14+12
+  80 0016 D15C     		ldrb	r1, [r2, r3]	@ zero_extendqisi2
+  81              	.LVL3:
+  32:Core/Src/uartParser.c **** 
+  82              		.loc 1 32 9 is_stmt 1 view .LVU13
+  32:Core/Src/uartParser.c **** 
+  83              		.loc 1 32 34 is_stmt 0 view .LVU14
+  84 0018 0133     		adds	r3, r3, #1
+  32:Core/Src/uartParser.c **** 
+  85              		.loc 1 32 39 view .LVU15
+  86 001a 5A42     		rsbs	r2, r3, #0
+  87 001c 03F07F03 		and	r3, r3, #127
+  88 0020 02F07F02 		and	r2, r2, #127
+  89 0024 58BF     		it	pl
+  90 0026 5342     		rsbpl	r3, r2, #0
+  32:Core/Src/uartParser.c **** 
+  91              		.loc 1 32 20 view .LVU16
+  92 0028 2F4A     		ldr	r2, .L14+8
+  93 002a 1380     		strh	r3, [r2]	@ movhi
+  34:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
+  94              		.loc 1 34 9 is_stmt 1 view .LVU17
+  34:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
+  95              		.loc 1 34 22 is_stmt 0 view .LVU18
+  96 002c 304B     		ldr	r3, .L14+16
+  97 002e 1B88     		ldrh	r3, [r3]
+  34:Core/Src/uartParser.c ****             temp_line_buffer[line_len++] = c;
+  98              		.loc 1 34 12 view .LVU19
+  99 0030 3E2B     		cmp	r3, #62
+ 100 0032 E9D8     		bhi	.L3
+  35:Core/Src/uartParser.c ****         }
+ 101              		.loc 1 35 13 is_stmt 1 view .LVU20
+  35:Core/Src/uartParser.c ****         }
+ 102              		.loc 1 35 38 is_stmt 0 view .LVU21
+ 103 0034 581C     		adds	r0, r3, #1
+ 104 0036 2E4A     		ldr	r2, .L14+16
+ 105 0038 1080     		strh	r0, [r2]	@ movhi
+  35:Core/Src/uartParser.c ****         }
+ 106              		.loc 1 35 42 view .LVU22
+ 107 003a 2E4A     		ldr	r2, .L14+20
+ 108 003c D154     		strb	r1, [r2, r3]
+ 109 003e E3E7     		b	.L3
+ 110              	.L10:
+ 111              	.LBB3:
+  39:Core/Src/uartParser.c ****             // Loại bỏ '\r' nếu có
+  40:Core/Src/uartParser.c ****             if (line_len >= 2 && temp_line_buffer[line_len - 2] == '\r') {
+ 112              		.loc 1 40 13 is_stmt 1 view .LVU23
+ 113              		.loc 1 40 26 is_stmt 0 view .LVU24
+ 114 0040 2B4B     		ldr	r3, .L14+16
+ 115 0042 1B88     		ldrh	r3, [r3]
+ 116              		.loc 1 40 16 view .LVU25
+ARM GAS  /tmp/cc2DFD5U.s 			page 4
 
 
- 121              	.L5:
-  37:Core/Src/uartParser.c ****                 temp_line_buffer[line_len - 2] = '\0';
-  38:Core/Src/uartParser.c ****             } else {
-  39:Core/Src/uartParser.c ****                 temp_line_buffer[line_len - 1] = '\0';
- 122              		.loc 1 39 17 is_stmt 1 view .LVU30
- 123              		.loc 1 39 43 is_stmt 0 view .LVU31
- 124 0052 013B     		subs	r3, r3, #1
- 125              		.loc 1 39 48 view .LVU32
- 126 0054 124A     		ldr	r2, .L14+12
- 127 0056 0021     		movs	r1, #0
- 128 0058 D154     		strb	r1, [r2, r3]
- 129              	.L6:
-  40:Core/Src/uartParser.c ****             }
-  41:Core/Src/uartParser.c **** 
-  42:Core/Src/uartParser.c ****             float temp_x = 0.0f, temp_y = 0.0f;
- 130              		.loc 1 42 13 is_stmt 1 view .LVU33
- 131              		.loc 1 42 19 is_stmt 0 view .LVU34
- 132 005a 0023     		movs	r3, #0
- 133 005c 0093     		str	r3, [sp]	@ float
- 134              		.loc 1 42 34 view .LVU35
- 135 005e 0193     		str	r3, [sp, #4]	@ float
-  43:Core/Src/uartParser.c ****             if (sscanf(temp_line_buffer, "#%f,%f", &temp_x, &temp_y) == 2) {
- 136              		.loc 1 43 13 is_stmt 1 view .LVU36
- 137              		.loc 1 43 17 is_stmt 0 view .LVU37
- 138 0060 01AB     		add	r3, sp, #4
- 139 0062 6A46     		mov	r2, sp
- 140 0064 0F49     		ldr	r1, .L14+16
- 141 0066 0E48     		ldr	r0, .L14+12
- 142 0068 FFF7FEFF 		bl	sscanf
- 143              	.LVL5:
- 144              		.loc 1 43 16 view .LVU38
- 145 006c 0228     		cmp	r0, #2
- 146 006e 07D0     		beq	.L13
- 147              	.L7:
-  44:Core/Src/uartParser.c ****                 x_value = temp_x;
-  45:Core/Src/uartParser.c ****                 y_value = temp_y;
-  46:Core/Src/uartParser.c ****             }
-  47:Core/Src/uartParser.c **** 
-  48:Core/Src/uartParser.c ****             // Reset buffer dòng
-  49:Core/Src/uartParser.c ****             line_len = 0;
- 148              		.loc 1 49 13 is_stmt 1 view .LVU39
- 149              		.loc 1 49 22 is_stmt 0 view .LVU40
- 150 0070 0A4B     		ldr	r3, .L14+8
- 151 0072 0022     		movs	r2, #0
- 152 0074 1A80     		strh	r2, [r3]	@ movhi
- 153 0076 C9E7     		b	.L4
- 154              	.L12:
-  37:Core/Src/uartParser.c ****             } else {
- 155              		.loc 1 37 17 is_stmt 1 view .LVU41
-  37:Core/Src/uartParser.c ****             } else {
- 156              		.loc 1 37 48 is_stmt 0 view .LVU42
- 157 0078 094B     		ldr	r3, .L14+12
- 158 007a 0021     		movs	r1, #0
- 159 007c 9954     		strb	r1, [r3, r2]
- 160 007e ECE7     		b	.L6
- 161              	.L13:
-  44:Core/Src/uartParser.c ****                 x_value = temp_x;
-ARM GAS  /tmp/ccRQwMwx.s 			page 5
+ 117 0044 012B     		cmp	r3, #1
+ 118 0046 04D9     		bls	.L5
+ 119              		.loc 1 40 60 discriminator 1 view .LVU26
+ 120 0048 9A1E     		subs	r2, r3, #2
+ 121              		.loc 1 40 50 discriminator 1 view .LVU27
+ 122 004a 2A49     		ldr	r1, .L14+20
+ 123              	.LVL4:
+ 124              		.loc 1 40 50 discriminator 1 view .LVU28
+ 125 004c 895C     		ldrb	r1, [r1, r2]	@ zero_extendqisi2
+ 126              		.loc 1 40 31 discriminator 1 view .LVU29
+ 127 004e 0D29     		cmp	r1, #13
+ 128 0050 12D0     		beq	.L12
+ 129              	.L5:
+  41:Core/Src/uartParser.c ****                 temp_line_buffer[line_len - 2] = '\0';
+  42:Core/Src/uartParser.c ****             } else {
+  43:Core/Src/uartParser.c ****                 temp_line_buffer[line_len - 1] = '\0';
+ 130              		.loc 1 43 17 is_stmt 1 view .LVU30
+ 131              		.loc 1 43 43 is_stmt 0 view .LVU31
+ 132 0052 013B     		subs	r3, r3, #1
+ 133              		.loc 1 43 48 view .LVU32
+ 134 0054 274A     		ldr	r2, .L14+20
+ 135 0056 0021     		movs	r1, #0
+ 136 0058 D154     		strb	r1, [r2, r3]
+ 137              	.L6:
+  44:Core/Src/uartParser.c ****             }
+  45:Core/Src/uartParser.c **** 
+  46:Core/Src/uartParser.c ****             float temp_distance = 0.0f, temp_angle = 0.0f;
+ 138              		.loc 1 46 13 is_stmt 1 view .LVU33
+ 139              		.loc 1 46 19 is_stmt 0 view .LVU34
+ 140 005a 0023     		movs	r3, #0
+ 141 005c 0093     		str	r3, [sp]	@ float
+ 142              		.loc 1 46 41 view .LVU35
+ 143 005e 0193     		str	r3, [sp, #4]	@ float
+  47:Core/Src/uartParser.c ****             if (sscanf(temp_line_buffer, "#%f,%f", &temp_distance, &temp_angle) == 2) {
+ 144              		.loc 1 47 13 is_stmt 1 view .LVU36
+ 145              		.loc 1 47 17 is_stmt 0 view .LVU37
+ 146 0060 01AB     		add	r3, sp, #4
+ 147 0062 6A46     		mov	r2, sp
+ 148 0064 2449     		ldr	r1, .L14+24
+ 149 0066 2348     		ldr	r0, .L14+20
+ 150 0068 FFF7FEFF 		bl	sscanf
+ 151              	.LVL5:
+ 152              		.loc 1 47 16 view .LVU38
+ 153 006c 0228     		cmp	r0, #2
+ 154 006e 07D0     		beq	.L13
+ 155              	.L7:
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+  49:Core/Src/uartParser.c ****                 x_value = temp_distance * cosf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+  50:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+  51:Core/Src/uartParser.c ****             }
+  52:Core/Src/uartParser.c **** 
+  53:Core/Src/uartParser.c ****             // Reset buffer dòng
+  54:Core/Src/uartParser.c ****             line_len = 0;
+ 156              		.loc 1 54 13 is_stmt 1 view .LVU39
+ 157              		.loc 1 54 22 is_stmt 0 view .LVU40
+ 158 0070 1F4B     		ldr	r3, .L14+16
+ 159 0072 0022     		movs	r2, #0
+ARM GAS  /tmp/cc2DFD5U.s 			page 5
 
 
- 162              		.loc 1 44 17 is_stmt 1 view .LVU43
-  44:Core/Src/uartParser.c ****                 x_value = temp_x;
- 163              		.loc 1 44 25 is_stmt 0 view .LVU44
- 164 0080 094B     		ldr	r3, .L14+20
- 165 0082 009A     		ldr	r2, [sp]	@ float
- 166 0084 1A60     		str	r2, [r3]	@ float
-  45:Core/Src/uartParser.c ****             }
- 167              		.loc 1 45 17 is_stmt 1 view .LVU45
-  45:Core/Src/uartParser.c ****             }
- 168              		.loc 1 45 25 is_stmt 0 view .LVU46
- 169 0086 094B     		ldr	r3, .L14+24
- 170 0088 019A     		ldr	r2, [sp, #4]	@ float
- 171 008a 1A60     		str	r2, [r3]	@ float
- 172 008c F0E7     		b	.L7
- 173              	.L11:
-  45:Core/Src/uartParser.c ****             }
- 174              		.loc 1 45 25 view .LVU47
- 175              	.LBE3:
- 176              	.LBE4:
-  50:Core/Src/uartParser.c ****         }
-  51:Core/Src/uartParser.c ****     }
-  52:Core/Src/uartParser.c **** }
- 177              		.loc 1 52 1 view .LVU48
- 178 008e 02B0     		add	sp, sp, #8
- 179              	.LCFI2:
- 180              		.cfi_def_cfa_offset 8
- 181              		@ sp needed
- 182 0090 10BD     		pop	{r4, pc}
- 183              	.L15:
- 184 0092 00BF     		.align	2
- 185              	.L14:
- 186 0094 00000000 		.word	.LANCHOR0
- 187 0098 00000000 		.word	uart_dma_buffer
- 188 009c 00000000 		.word	.LANCHOR1
- 189 00a0 00000000 		.word	.LANCHOR2
- 190 00a4 00000000 		.word	.LC0
- 191 00a8 00000000 		.word	.LANCHOR3
- 192 00ac 00000000 		.word	.LANCHOR4
- 193              		.cfi_endproc
- 194              	.LFE3:
- 196              		.section	.text.getX,"ax",%progbits
- 197              		.align	1
- 198              		.global	getX
- 199              		.syntax unified
- 200              		.thumb
- 201              		.thumb_func
- 202              		.fpu softvfp
- 204              	getX:
- 205              	.LFB4:
-  53:Core/Src/uartParser.c **** 
-  54:Core/Src/uartParser.c **** float getX() {
- 206              		.loc 1 54 14 is_stmt 1 view -0
- 207              		.cfi_startproc
- 208              		@ args = 0, pretend = 0, frame = 0
- 209              		@ frame_needed = 0, uses_anonymous_args = 0
- 210              		@ link register save eliminated.
-  55:Core/Src/uartParser.c ****     return x_value;
-ARM GAS  /tmp/ccRQwMwx.s 			page 6
+ 160 0074 1A80     		strh	r2, [r3]	@ movhi
+ 161 0076 C9E7     		b	.L4
+ 162              	.L12:
+  41:Core/Src/uartParser.c ****             } else {
+ 163              		.loc 1 41 17 is_stmt 1 view .LVU41
+  41:Core/Src/uartParser.c ****             } else {
+ 164              		.loc 1 41 48 is_stmt 0 view .LVU42
+ 165 0078 1E4B     		ldr	r3, .L14+20
+ 166 007a 0021     		movs	r1, #0
+ 167 007c 9954     		strb	r1, [r3, r2]
+ 168 007e ECE7     		b	.L6
+ 169              	.L13:
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+ 170              		.loc 1 48 17 is_stmt 1 view .LVU43
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+ 171              		.loc 1 48 37 is_stmt 0 view .LVU44
+ 172 0080 1E49     		ldr	r1, .L14+28
+ 173 0082 0198     		ldr	r0, [sp, #4]	@ float
+ 174 0084 FFF7FEFF 		bl	__aeabi_fadd
+ 175              	.LVL6:
+ 176 0088 FFF7FEFF 		bl	__aeabi_f2d
+ 177              	.LVL7:
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+ 178              		.loc 1 48 43 view .LVU45
+ 179 008c 14A3     		adr	r3, .L14
+ 180 008e D3E90023 		ldrd	r2, [r3]
+ 181 0092 FFF7FEFF 		bl	__aeabi_dmul
+ 182              	.LVL8:
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+ 183              		.loc 1 48 49 view .LVU46
+ 184 0096 0022     		movs	r2, #0
+ 185 0098 194B     		ldr	r3, .L14+32
+ 186 009a FFF7FEFF 		bl	__aeabi_ddiv
+ 187              	.LVL9:
+ 188 009e FFF7FEFF 		bl	__aeabi_d2f
+ 189              	.LVL10:
+ 190 00a2 0546     		mov	r5, r0
+  48:Core/Src/uartParser.c ****                 angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung vo
+ 191              		.loc 1 48 23 view .LVU47
+ 192 00a4 174B     		ldr	r3, .L14+36
+ 193 00a6 1860     		str	r0, [r3]	@ float
+  49:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+ 194              		.loc 1 49 17 is_stmt 1 view .LVU48
+  49:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+ 195              		.loc 1 49 43 is_stmt 0 view .LVU49
+ 196 00a8 FFF7FEFF 		bl	cosf
+ 197              	.LVL11:
+  49:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+ 198              		.loc 1 49 41 view .LVU50
+ 199 00ac 009E     		ldr	r6, [sp]	@ float
+ 200 00ae 3146     		mov	r1, r6
+ 201 00b0 FFF7FEFF 		bl	__aeabi_fmul
+ 202              	.LVL12:
+  49:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+ 203              		.loc 1 49 55 view .LVU51
+ 204 00b4 1449     		ldr	r1, .L14+40
+ 205 00b6 FFF7FEFF 		bl	__aeabi_fmul
+ARM GAS  /tmp/cc2DFD5U.s 			page 6
 
 
- 211              		.loc 1 55 5 view .LVU50
-  56:Core/Src/uartParser.c **** }
- 212              		.loc 1 56 1 is_stmt 0 view .LVU51
- 213 0000 014B     		ldr	r3, .L17
- 214 0002 1868     		ldr	r0, [r3]	@ float
- 215 0004 7047     		bx	lr
- 216              	.L18:
- 217 0006 00BF     		.align	2
- 218              	.L17:
- 219 0008 00000000 		.word	.LANCHOR3
- 220              		.cfi_endproc
- 221              	.LFE4:
- 223              		.section	.text.getY,"ax",%progbits
- 224              		.align	1
- 225              		.global	getY
- 226              		.syntax unified
- 227              		.thumb
- 228              		.thumb_func
- 229              		.fpu softvfp
- 231              	getY:
- 232              	.LFB5:
-  57:Core/Src/uartParser.c **** 
-  58:Core/Src/uartParser.c **** float getY() {
- 233              		.loc 1 58 14 is_stmt 1 view -0
- 234              		.cfi_startproc
- 235              		@ args = 0, pretend = 0, frame = 0
- 236              		@ frame_needed = 0, uses_anonymous_args = 0
- 237              		@ link register save eliminated.
-  59:Core/Src/uartParser.c ****     return y_value;
- 238              		.loc 1 59 5 view .LVU53
-  60:Core/Src/uartParser.c **** }
- 239              		.loc 1 60 1 is_stmt 0 view .LVU54
- 240 0000 014B     		ldr	r3, .L20
- 241 0002 1868     		ldr	r0, [r3]	@ float
- 242 0004 7047     		bx	lr
- 243              	.L21:
- 244 0006 00BF     		.align	2
- 245              	.L20:
- 246 0008 00000000 		.word	.LANCHOR4
- 247              		.cfi_endproc
- 248              	.LFE5:
- 250              		.section	.bss.last_index,"aw",%nobits
- 251              		.align	1
- 252              		.set	.LANCHOR0,. + 0
- 255              	last_index:
- 256 0000 0000     		.space	2
- 257              		.section	.bss.line_len.0,"aw",%nobits
+ 206              	.LVL13:
+  49:Core/Src/uartParser.c ****                 y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển 
+ 207              		.loc 1 49 25 view .LVU52
+ 208 00ba 144B     		ldr	r3, .L14+44
+ 209 00bc 1860     		str	r0, [r3]	@ float
+  50:Core/Src/uartParser.c ****             }
+ 210              		.loc 1 50 17 is_stmt 1 view .LVU53
+  50:Core/Src/uartParser.c ****             }
+ 211              		.loc 1 50 43 is_stmt 0 view .LVU54
+ 212 00be 2846     		mov	r0, r5
+ 213 00c0 FFF7FEFF 		bl	sinf
+ 214              	.LVL14:
+ 215 00c4 0146     		mov	r1, r0
+  50:Core/Src/uartParser.c ****             }
+ 216              		.loc 1 50 41 view .LVU55
+ 217 00c6 3046     		mov	r0, r6
+ 218 00c8 FFF7FEFF 		bl	__aeabi_fmul
+ 219              	.LVL15:
+  50:Core/Src/uartParser.c ****             }
+ 220              		.loc 1 50 55 view .LVU56
+ 221 00cc 0E49     		ldr	r1, .L14+40
+ 222 00ce FFF7FEFF 		bl	__aeabi_fmul
+ 223              	.LVL16:
+  50:Core/Src/uartParser.c ****             }
+ 224              		.loc 1 50 25 view .LVU57
+ 225 00d2 0F4B     		ldr	r3, .L14+48
+ 226 00d4 1860     		str	r0, [r3]	@ float
+ 227 00d6 CBE7     		b	.L7
+ 228              	.L11:
+  50:Core/Src/uartParser.c ****             }
+ 229              		.loc 1 50 25 view .LVU58
+ 230              	.LBE3:
+ 231              	.LBE4:
+  55:Core/Src/uartParser.c ****         }
+  56:Core/Src/uartParser.c ****     }
+  57:Core/Src/uartParser.c **** }
+ 232              		.loc 1 57 1 view .LVU59
+ 233 00d8 02B0     		add	sp, sp, #8
+ 234              	.LCFI2:
+ 235              		.cfi_def_cfa_offset 16
+ 236              		@ sp needed
+ 237 00da 70BD     		pop	{r4, r5, r6, pc}
+ 238              	.L15:
+ 239 00dc AFF30080 		.align	3
+ 240              	.L14:
+ 241 00e0 182D4454 		.word	1413754136
+ 242 00e4 FB210940 		.word	1074340347
+ 243 00e8 00000000 		.word	.LANCHOR0
+ 244 00ec 00000000 		.word	uart_dma_buffer
+ 245 00f0 00000000 		.word	.LANCHOR1
+ 246 00f4 00000000 		.word	.LANCHOR2
+ 247 00f8 00000000 		.word	.LC0
+ 248 00fc 00002C42 		.word	1110179840
+ 249 0100 00806640 		.word	1080459264
+ 250 0104 00000000 		.word	.LANCHOR3
+ 251 0108 00007A44 		.word	1148846080
+ 252 010c 00000000 		.word	.LANCHOR4
+ARM GAS  /tmp/cc2DFD5U.s 			page 7
+
+
+ 253 0110 00000000 		.word	.LANCHOR5
+ 254              		.cfi_endproc
+ 255              	.LFE3:
+ 257              		.section	.text.getX,"ax",%progbits
  258              		.align	1
- 259              		.set	.LANCHOR1,. + 0
- 262              	line_len.0:
- 263 0000 0000     		.space	2
- 264              		.section	.bss.temp_line_buffer,"aw",%nobits
- 265              		.align	2
- 266              		.set	.LANCHOR2,. + 0
- 269              	temp_line_buffer:
- 270 0000 00000000 		.space	64
- 270      00000000 
-ARM GAS  /tmp/ccRQwMwx.s 			page 7
+ 259              		.global	getX
+ 260              		.syntax unified
+ 261              		.thumb
+ 262              		.thumb_func
+ 263              		.fpu softvfp
+ 265              	getX:
+ 266              	.LFB4:
+  58:Core/Src/uartParser.c **** 
+  59:Core/Src/uartParser.c **** float getX() {
+ 267              		.loc 1 59 14 is_stmt 1 view -0
+ 268              		.cfi_startproc
+ 269              		@ args = 0, pretend = 0, frame = 0
+ 270              		@ frame_needed = 0, uses_anonymous_args = 0
+ 271              		@ link register save eliminated.
+  60:Core/Src/uartParser.c ****     return x_value;
+ 272              		.loc 1 60 5 view .LVU61
+  61:Core/Src/uartParser.c **** }
+ 273              		.loc 1 61 1 is_stmt 0 view .LVU62
+ 274 0000 014B     		ldr	r3, .L17
+ 275 0002 1868     		ldr	r0, [r3]	@ float
+ 276 0004 7047     		bx	lr
+ 277              	.L18:
+ 278 0006 00BF     		.align	2
+ 279              	.L17:
+ 280 0008 00000000 		.word	.LANCHOR4
+ 281              		.cfi_endproc
+ 282              	.LFE4:
+ 284              		.section	.text.getY,"ax",%progbits
+ 285              		.align	1
+ 286              		.global	getY
+ 287              		.syntax unified
+ 288              		.thumb
+ 289              		.thumb_func
+ 290              		.fpu softvfp
+ 292              	getY:
+ 293              	.LFB5:
+  62:Core/Src/uartParser.c **** 
+  63:Core/Src/uartParser.c **** float getY() {
+ 294              		.loc 1 63 14 is_stmt 1 view -0
+ 295              		.cfi_startproc
+ 296              		@ args = 0, pretend = 0, frame = 0
+ 297              		@ frame_needed = 0, uses_anonymous_args = 0
+ 298              		@ link register save eliminated.
+  64:Core/Src/uartParser.c ****     return y_value;
+ 299              		.loc 1 64 5 view .LVU64
+  65:Core/Src/uartParser.c **** }
+ 300              		.loc 1 65 1 is_stmt 0 view .LVU65
+ 301 0000 014B     		ldr	r3, .L20
+ 302 0002 1868     		ldr	r0, [r3]	@ float
+ 303 0004 7047     		bx	lr
+ 304              	.L21:
+ 305 0006 00BF     		.align	2
+ARM GAS  /tmp/cc2DFD5U.s 			page 8
 
 
- 270      00000000 
- 270      00000000 
- 270      00000000 
- 271              		.section	.bss.x_value,"aw",%nobits
- 272              		.align	2
- 273              		.set	.LANCHOR3,. + 0
- 276              	x_value:
- 277 0000 00000000 		.space	4
- 278              		.section	.bss.y_value,"aw",%nobits
- 279              		.align	2
- 280              		.set	.LANCHOR4,. + 0
- 283              	y_value:
- 284 0000 00000000 		.space	4
- 285              		.text
- 286              	.Letext0:
- 287              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
- 288              		.file 3 "/usr/include/newlib/stdio.h"
-ARM GAS  /tmp/ccRQwMwx.s 			page 8
+ 306              	.L20:
+ 307 0008 00000000 		.word	.LANCHOR5
+ 308              		.cfi_endproc
+ 309              	.LFE5:
+ 311              		.section	.bss.angle,"aw",%nobits
+ 312              		.align	2
+ 313              		.set	.LANCHOR3,. + 0
+ 316              	angle:
+ 317 0000 00000000 		.space	4
+ 318              		.section	.bss.last_index,"aw",%nobits
+ 319              		.align	1
+ 320              		.set	.LANCHOR0,. + 0
+ 323              	last_index:
+ 324 0000 0000     		.space	2
+ 325              		.section	.bss.line_len.0,"aw",%nobits
+ 326              		.align	1
+ 327              		.set	.LANCHOR1,. + 0
+ 330              	line_len.0:
+ 331 0000 0000     		.space	2
+ 332              		.section	.bss.temp_line_buffer,"aw",%nobits
+ 333              		.align	2
+ 334              		.set	.LANCHOR2,. + 0
+ 337              	temp_line_buffer:
+ 338 0000 00000000 		.space	64
+ 338      00000000 
+ 338      00000000 
+ 338      00000000 
+ 338      00000000 
+ 339              		.section	.bss.x_value,"aw",%nobits
+ 340              		.align	2
+ 341              		.set	.LANCHOR4,. + 0
+ 344              	x_value:
+ 345 0000 00000000 		.space	4
+ 346              		.section	.bss.y_value,"aw",%nobits
+ 347              		.align	2
+ 348              		.set	.LANCHOR5,. + 0
+ 351              	y_value:
+ 352 0000 00000000 		.space	4
+ 353              		.text
+ 354              	.Letext0:
+ 355              		.file 2 "/usr/lib/gcc/arm-none-eabi/10.3.1/include/stdint.h"
+ 356              		.file 3 "/usr/include/newlib/stdio.h"
+ 357              		.file 4 "/usr/include/newlib/math.h"
+ARM GAS  /tmp/cc2DFD5U.s 			page 9
 
 
 DEFINED SYMBOLS
                             *ABS*:0000000000000000 uartParser.c
-     /tmp/ccRQwMwx.s:16     .rodata.UART_ProcessDMAData.str1.4:0000000000000000 $d
-     /tmp/ccRQwMwx.s:20     .text.UART_ProcessDMAData:0000000000000000 $t
-     /tmp/ccRQwMwx.s:28     .text.UART_ProcessDMAData:0000000000000000 UART_ProcessDMAData
-     /tmp/ccRQwMwx.s:186    .text.UART_ProcessDMAData:0000000000000094 $d
-     /tmp/ccRQwMwx.s:197    .text.getX:0000000000000000 $t
-     /tmp/ccRQwMwx.s:204    .text.getX:0000000000000000 getX
-     /tmp/ccRQwMwx.s:219    .text.getX:0000000000000008 $d
-     /tmp/ccRQwMwx.s:224    .text.getY:0000000000000000 $t
-     /tmp/ccRQwMwx.s:231    .text.getY:0000000000000000 getY
-     /tmp/ccRQwMwx.s:246    .text.getY:0000000000000008 $d
-     /tmp/ccRQwMwx.s:251    .bss.last_index:0000000000000000 $d
-     /tmp/ccRQwMwx.s:255    .bss.last_index:0000000000000000 last_index
-     /tmp/ccRQwMwx.s:258    .bss.line_len.0:0000000000000000 $d
-     /tmp/ccRQwMwx.s:262    .bss.line_len.0:0000000000000000 line_len.0
-     /tmp/ccRQwMwx.s:265    .bss.temp_line_buffer:0000000000000000 $d
-     /tmp/ccRQwMwx.s:269    .bss.temp_line_buffer:0000000000000000 temp_line_buffer
-     /tmp/ccRQwMwx.s:272    .bss.x_value:0000000000000000 $d
-     /tmp/ccRQwMwx.s:276    .bss.x_value:0000000000000000 x_value
-     /tmp/ccRQwMwx.s:279    .bss.y_value:0000000000000000 $d
-     /tmp/ccRQwMwx.s:283    .bss.y_value:0000000000000000 y_value
+     /tmp/cc2DFD5U.s:16     .rodata.UART_ProcessDMAData.str1.4:0000000000000000 $d
+     /tmp/cc2DFD5U.s:26     .text.UART_ProcessDMAData:0000000000000000 $t
+     /tmp/cc2DFD5U.s:34     .text.UART_ProcessDMAData:0000000000000000 UART_ProcessDMAData
+     /tmp/cc2DFD5U.s:241    .text.UART_ProcessDMAData:00000000000000e0 $d
+     /tmp/cc2DFD5U.s:258    .text.getX:0000000000000000 $t
+     /tmp/cc2DFD5U.s:265    .text.getX:0000000000000000 getX
+     /tmp/cc2DFD5U.s:280    .text.getX:0000000000000008 $d
+     /tmp/cc2DFD5U.s:285    .text.getY:0000000000000000 $t
+     /tmp/cc2DFD5U.s:292    .text.getY:0000000000000000 getY
+     /tmp/cc2DFD5U.s:307    .text.getY:0000000000000008 $d
+     /tmp/cc2DFD5U.s:312    .bss.angle:0000000000000000 $d
+     /tmp/cc2DFD5U.s:316    .bss.angle:0000000000000000 angle
+     /tmp/cc2DFD5U.s:319    .bss.last_index:0000000000000000 $d
+     /tmp/cc2DFD5U.s:323    .bss.last_index:0000000000000000 last_index
+     /tmp/cc2DFD5U.s:326    .bss.line_len.0:0000000000000000 $d
+     /tmp/cc2DFD5U.s:330    .bss.line_len.0:0000000000000000 line_len.0
+     /tmp/cc2DFD5U.s:333    .bss.temp_line_buffer:0000000000000000 $d
+     /tmp/cc2DFD5U.s:337    .bss.temp_line_buffer:0000000000000000 temp_line_buffer
+     /tmp/cc2DFD5U.s:340    .bss.x_value:0000000000000000 $d
+     /tmp/cc2DFD5U.s:344    .bss.x_value:0000000000000000 x_value
+     /tmp/cc2DFD5U.s:347    .bss.y_value:0000000000000000 $d
+     /tmp/cc2DFD5U.s:351    .bss.y_value:0000000000000000 y_value
 
 UNDEFINED SYMBOLS
+__aeabi_fadd
+__aeabi_f2d
+__aeabi_dmul
+__aeabi_ddiv
+__aeabi_d2f
+__aeabi_fmul
 sscanf
+cosf
+sinf
 uart_dma_buffer

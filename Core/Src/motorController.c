@@ -1,6 +1,8 @@
 #include "motorController.h"
 #include "stm32f1xx_hal.h"
 #include <math.h>
+#include <stdio.h>
+#include <string.h>
 
 #define PULSES_PER_REV     3584.0f
 #define DIAMETER_MM        8.0f // Wheel diameter in mm
@@ -8,6 +10,7 @@
 #define WHEEL_CIRCUMFERENCE_MM 25.12f // Wheel circumference in mm
 #define DISTANCE_PER_PULSE 0.007f // mm per pulse
 
+extern UART_HandleTypeDef huart2; // UART for debug output
 extern TIM_HandleTypeDef htim1;  // Encoder - TIM1
 extern TIM_HandleTypeDef htim3;  // PWM - TIM3 CH1 (PA6)
 
@@ -21,13 +24,17 @@ typedef struct {
     float target_position_mm;
 } PositionMapping;
 
-static const PositionMapping position_table[] = {
-    {0.0f, 0.0f, 0.0f},     // (x, y) -> target_position_mm
-    {10.0f, 10.0f, 50.0f},
-    {20.0f, 20.0f, 100.0f},
-    {30.0f, 30.0f, 150.0f},
-    {40.0f, 40.0f, 200.0f},
-    // Add more entries as needed
+static const PositionMapping position_table[] = {   // (x, y) -> target_position_mm
+    {0.0f, 50.0f, 20.0f},
+    {0.0f, 150.0f, 20.0f},
+    {0.0f, 250.0f, 40.0f},
+    {0.0f, 350.0f, 80.0f},
+    {0.0f, 450.0f, 100.0f},
+    {0.0f, 550.0f, 120.0f},
+    {0.0f, 650.0f, 120.0f},
+    // {0.0f, 350.0f, 80.0f},
+    // {0.0f, 350.0f, 80.0f},
+    // {0.0f, 350.0f, 80.0f},
 };
 #define TABLE_SIZE (sizeof(position_table) / sizeof(position_table[0]))
 
@@ -53,9 +60,7 @@ float LookupTargetPosition(float x, float y) {
             target_pos = position_table[i].target_position_mm;
         }
     }
-    // Convert target position to mm
-    target_pos_mm = target_pos * WHEEL_CIRCUMFERENCE_MM / PITCH; // Assuming target_pos is in pulses, convert to mm
-    return target_pos_mm;
+    return target_pos;
 }
 
 void Motor_Init(void) {
@@ -63,14 +68,11 @@ void Motor_Init(void) {
     * Initialize the motor controller
     * Set up the encoder and PWM
     */
-    PID_Init(&pid, 2.0f, 0.5f, 5.0f, 0.001f); // PID parameters
+    //PID_Init(&pid, 0.8f, 0.001f, 0.005f, 0.001f); // PID parameters
+    PID_Init(&pid, 1.5f, 0.005f, 0.015f, 0.001f); // PID parameters
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);  // Make sure PWM is off
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // IN1 = 0
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // IN2 = 0
-}
-    
-void Motor_SetTargetPosition(float mm) {
-    target_position_mm = mm;
 }
 
 float Motor_GetCurrentPosition_mm(void) {
@@ -94,12 +96,14 @@ float Motor_GetCurrentPosition_mm(void) {
     motor.positionPulse += delta;
 
     // Calculate position in mm
-    return motor.positionPulse * WHEEL_CIRCUMFERENCE_MM / PULSES_PER_REV;
+    motor.position = motor.positionPulse * PITCH / PULSES_PER_REV;
+    return motor.position;
 }
-
+int getPWM(void) {
+    // Get the current PWM value
+    return __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_1);
+}
 void SetMotorOutput(float voltage) {
-    int pwm = (int)(fabsf(voltage) / VOLTAGE_MAX * 1000.0f);  // Convert to 0-1000 PWM duty
-    if (pwm > 1000) pwm = 1000;
 
     // Direction control
     if (voltage > 0) {
@@ -113,6 +117,10 @@ void SetMotorOutput(float voltage) {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET);
     }
     // Set PWM duty cycle
+    int pwm = (int)(fabsf(voltage) / VOLTAGE_MAX * 1000.0f);  // Convert to 0-1000 PWM duty
+    if (pwm > 1000) pwm = 1000;
+    if (pwm > 50 && pwm <200) pwm = 200; // Ensure minimum PWM is 200
+    if (pwm <= 50) pwm = 0; // Ensure minimum PWM is 0
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, pwm);
 }
 
