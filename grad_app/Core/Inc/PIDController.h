@@ -10,11 +10,11 @@ typedef struct {
     float Kp;
     float Ki;
     float Kd;
-    float Ts;
+    float Ts; // Sampling time in seconds
 
-    float prev_error;
-    float integral;
+    float error[3]; // [0]: current, [1]: previous, [2]: prev-previous
     float output;
+
 } PIDController;
 
 void PID_Init(PIDController* pid, float Kp, float Ki, float Kd, float Ts);

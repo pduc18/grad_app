@@ -8,22 +8,23 @@
 #define DMA_BUFFER_SIZE 128
 #define TEMP_LINE_BUFFER_SIZE 64
 #define M_PI 3.14159265358979323846
+#define dy 500 // mm, distance from lidar to transmitter
 
 static float distance = 0.0f;
 static float angle = 0.0f;
-static float x_value = 0.0f;
-static float y_value = 0.0f;
+static float Dtf_value = 0.0f;
+static float Dmis_value = 0.0f;
 
-// DMA buffer do UART nhận dữ liệu
+// DMA buffer for UART data
 extern uint8_t uart_dma_buffer[DMA_BUFFER_SIZE];
 
-// Vị trí cuối cùng đã xử lý
+// Last index of the DMA buffer to process
 static uint16_t last_index = 0;
 
-// Bộ đệm tạm để chứa 1 dòng
+// Temporary line buffer for processing incoming data
 static char temp_line_buffer[TEMP_LINE_BUFFER_SIZE];
 
-// Hàm xử lý dữ liệu từ DMA buffer
+// Function to process the UART data received via DMA
 void UART_ProcessDMAData(uint16_t current_write_index) {
     static uint16_t line_len = 0;
 
@@ -33,33 +34,36 @@ void UART_ProcessDMAData(uint16_t current_write_index) {
 
         if (line_len < TEMP_LINE_BUFFER_SIZE - 1) {
             temp_line_buffer[line_len++] = c;
+        } else {
+            // Buffer overflow - reset and start over
+            line_len = 0;
+            continue;
         }
 
         if (c == '\n') {
-            // Loại bỏ '\r' nếu có
-            if (line_len >= 2 && temp_line_buffer[line_len - 2] == '\r') {
-                temp_line_buffer[line_len - 2] = '\0';
-            } else {
-                temp_line_buffer[line_len - 1] = '\0';
-            }
-
+            // Process the line as before...
+            temp_line_buffer[line_len - 1] = '\0';
+            
             float temp_distance = 0.0f, temp_angle = 0.0f;
             if (sscanf(temp_line_buffer, "#%f,%f", &temp_distance, &temp_angle) == 2) {
-                angle = (temp_angle + 43) *M_PI / 180.0f; // Điều chỉnh góc, -43 tuong ung voi goc 0 do
-                x_value = temp_distance * cosf(angle) *1000.0f; // Nhân với 1000 để chuyển đổi sang mm
-                y_value = temp_distance * sinf(angle) *1000.0f; // Nhân với 1000 để chuyển đổi sang mm  
+                // Validate data ranges
+                if (temp_distance >= 0.0f && temp_distance <= 10.0f && 
+                    temp_angle >= -180.0f && temp_angle <= 180.0f) {
+                    angle = (temp_angle + 43) * M_PI / 180.0f;
+                    Dtf_value = temp_distance * cosf(angle) * 1000.0f;
+                    Dmis_value = temp_distance * sinf(angle) * 1000.0f;
+                }
             }
-
-            // Reset buffer dòng
             line_len = 0;
         }
     }
 }
 
-float getX() {
-    return x_value;
+
+float getDtf() {
+    return Dtf_value;
 }
 
-float getY() {
-    return y_value;
+float getDmis() {
+    return fabs(Dmis_value - dy); // Adjust Dmis_value based on dy
 }

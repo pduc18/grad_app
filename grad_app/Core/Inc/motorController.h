@@ -14,7 +14,6 @@ typedef struct {
 } Motor_TypeDef;
 
 void Motor_Init(void);
-void Motor_SetTargetPosition(float mm);
 float Motor_GetCurrentPosition_mm(void);
 void SetMotorOutput(float voltage);
 void Motor_ComputePID(float current_position, float target_position_mm);

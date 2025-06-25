@@ -19,41 +19,43 @@ static float target_position_mm = 0;
 
 // Lookup table for x, y to target position mapping
 typedef struct {
-    float x;
-    float y;
+    float Dtf;
+    float Dmis;
     float target_position_mm;
 } PositionMapping;
 
-static const PositionMapping position_table[] = {   // (x, y) -> target_position_mm
-    {0.0f, 50.0f, 20.0f},
-    {0.0f, 150.0f, 20.0f},
-    {0.0f, 250.0f, 40.0f},
-    {0.0f, 350.0f, 80.0f},
-    {0.0f, 450.0f, 100.0f},
-    {0.0f, 550.0f, 120.0f},
-    {0.0f, 650.0f, 120.0f},
-    // {0.0f, 350.0f, 80.0f},
-    // {0.0f, 350.0f, 80.0f},
-    // {0.0f, 350.0f, 80.0f},
+static const PositionMapping position_table[] = {   // (Dtf, Dmis) -> target_position_mm
+    {250.0f, 0.0f, 0.0f},
+    {300.0f, 0.0f, 20.0f},
+    {350.0f, 0.0f, 30.0f},
+    {400.0f, 0.0f, 75.0f},
+    {450.0f, 0.0f, 70.0f},
+    {500.0f, 0.0f, 110.0f},
+    {550.0f, 0.0f, 120.0f},
+    {600.0f, 0.0f, 150.0f},
+    {700.0f, 0.0f, 155.0f},
+    {750.0f, 0.0f, 185.0f},
+    {800.0f, 0.0f, 235.0f},
+    {475.0f, 0.0f, 90.0f},
 };
 #define TABLE_SIZE (sizeof(position_table) / sizeof(position_table[0]))
 
 Motor_TypeDef motor = {
     .encoderValueNow = 0,
     .encoderValuePrev = 0,
-    .positionPulse = 0,
-    .position = 0,
+    .positionPulse = (int32_t)(120.0f * PULSES_PER_REV / PITCH),
+    .position = 120.0f,
 };
 
-// Find the closest x, y in the lookup table using Euclidean distance
-float LookupTargetPosition(float x, float y) {
+// Find the closest Dtf, Dmis in the lookup table using Euclidean distance
+float LookupTargetPosition(float Dtf, float Dmis) {
     float min_distance = FLT_MAX;
     float target_pos = 0.0f;
     float target_pos_mm = 0.0f;
 
     for (size_t i = 0; i < TABLE_SIZE; i++) {
-        float dx = position_table[i].x - x;
-        float dy = position_table[i].y - y;
+        float dx = position_table[i].Dtf - Dtf;
+        float dy = position_table[i].Dmis - Dmis;
         float distance = sqrtf(dx * dx + dy * dy);
         if (distance < min_distance) {
             min_distance = distance;
@@ -68,14 +70,11 @@ void Motor_Init(void) {
     * Initialize the motor controller
     * Set up the encoder and PWM
     */
-    PID_Init(&pid, 0.8f, 0.001f, 0.005f, 0.001f); // PID parameters
+    //PID_Init(&pid, 0.8f, 0.001f, 0.005f, 0.001f); // PID parameters
+    PID_Init(&pid, 1.5f, 0.005f, 0.015f, 0.001f); // PID parameters
     __HAL_TIM_SET_COMPARE(&htim3, TIM_CHANNEL_1, 0);  // Make sure PWM is off
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // IN1 = 0
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // IN2 = 0
-}
-    
-void Motor_SetTargetPosition(float mm) {
-    target_position_mm = mm;
 }
 
 float Motor_GetCurrentPosition_mm(void) {
@@ -102,12 +101,12 @@ float Motor_GetCurrentPosition_mm(void) {
     motor.position = motor.positionPulse * PITCH / PULSES_PER_REV;
     return motor.position;
 }
+
 int getPWM(void) {
     // Get the current PWM value
     return __HAL_TIM_GET_COMPARE(&htim3, TIM_CHANNEL_1);
 }
 void SetMotorOutput(float voltage) {
-
     // Direction control
     if (voltage > 0) {
         HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // IN1 = 1
