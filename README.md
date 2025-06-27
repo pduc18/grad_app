@@ -1,5 +1,3 @@
-Based on the provided files from both the ROS (line_laser_ros) and STM32 (grad_app) sides, here is a detailed review focusing on your requirements:
-
 ---
 
 ## 1. **Data Flow and Protocol**
